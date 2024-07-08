@@ -1,1 +1,1 @@
-# Compressed-Sensing-using-Generative-Models
+# Compressed Sensing using Generative Models
