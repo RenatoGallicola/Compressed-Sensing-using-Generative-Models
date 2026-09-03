@@ -6,6 +6,10 @@ prior. Results are written as a long-format CSV (one row per method/m/image)
 plus an ``.npz`` of reconstructions that ``scripts/make_figures.py`` turns into
 the figures under ``results/figures/``.
 
+The protocol mirrors Bora et al. (2017), section 6.1.1: Adam at a learning rate
+of 0.01, 1000 steps, 10 random restarts, and a noise vector whose expected norm
+is held at 0.1 regardless of the budget.
+
 Example:
     python scripts/run_benchmark.py --n-images 10 --steps 1000 --restarts 10
 """
@@ -26,7 +30,7 @@ from csgm.measurements import gaussian_measurement_matrix, measure
 from csgm.metrics import per_pixel_l2, psnr
 from csgm.recovery import RecoveryConfig, recover
 
-DEFAULT_M_VALUES = (10, 20, 30, 50, 100, 200, 300, 400, 500, 600, 750)
+DEFAULT_M_VALUES = (10, 25, 50, 75, 100, 200, 300, 400, 500, 750)
 DEFAULT_METHODS = ("lasso", "vae-20", "vae-30", "dcgan-20", "dcgan-30")
 
 
@@ -53,7 +57,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--l2-penalty", type=float, default=0.0, help="weight of the ||z||^2 prior term"
     )
-    parser.add_argument("--noise-std", type=float, default=0.01, help="measurement noise sigma")
+    parser.add_argument(
+        "--noise-norm",
+        type=float,
+        default=0.1,
+        help=(
+            "expected noise magnitude sqrt(E||eta||^2), held constant across budgets "
+            "as in Bora et al.; the per-component sigma is this divided by sqrt(m)"
+        ),
+    )
+    parser.add_argument(
+        "--noise-std",
+        type=float,
+        default=None,
+        help="fixed per-component noise sigma, overriding --noise-norm",
+    )
     parser.add_argument("--lasso-alpha", type=float, default=1e-5, help="Lasso L1 strength")
     parser.add_argument(
         "--image-batch-size", type=int, default=10, help="images optimised in one pass"
@@ -111,7 +129,10 @@ def main() -> None:
         # One matrix per m, shared by every method, derived deterministically
         # from the global seed so the whole sweep is reproducible.
         A = gaussian_measurement_matrix(m, N_PIXELS, seed=args.seed + m)
-        y = measure(images, A, noise_std=args.noise_std, seed=args.seed + m)
+        # A fixed per-component sigma would make the total noise grow as sqrt(m);
+        # scaling by 1/sqrt(m) keeps ||eta|| constant, so budgets stay comparable.
+        noise_std = args.noise_std if args.noise_std is not None else args.noise_norm / np.sqrt(m)
+        y = measure(images, A, noise_std=noise_std, seed=args.seed + m)
 
         for method in args.methods:
             family, latent_dim = parse_method(method)

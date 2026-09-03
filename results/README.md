@@ -16,7 +16,9 @@
 | `figures/error_vs_measurements.png` | mean per-pixel error vs. $m$, one curve per prior |
 | `figures/reconstruction_grid.png` | one digit reconstructed by every method at every budget |
 | `figures/prior_samples.png` | unconditional samples from each generator |
+| `figures/metric_comparison.png` | the same runs scored as reconstruction error and as measurement residual |
 | `summary.md`, `summary.csv` | mean per-pixel error per method and budget |
+| `sample_efficiency.md` | measurements each prior needs to match Lasso at m = 400 |
 
 `benchmark.csv` and `summary.*` are committed so the numbers can be checked
 without re-running the sweep; `reconstructions.npz` is not, since it is bulky

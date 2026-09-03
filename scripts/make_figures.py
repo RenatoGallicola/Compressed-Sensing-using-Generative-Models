@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from csgm.config import FIGURES_DIR, IMAGE_SHAPE, RESULTS_DIR
+from csgm.config import FIGURES_DIR, IMAGE_SHAPE, N_PIXELS, RESULTS_DIR
 from csgm.viz import plot_error_curves, save_figure
 
 LABELS = {
@@ -67,6 +67,95 @@ def error_curves(df: pd.DataFrame, figures_dir: Path) -> Path:
     return save_figure(fig, figures_dir / "error_vs_measurements.png")
 
 
+def metric_comparison(df: pd.DataFrame, figures_dir: Path) -> Path:
+    """Contrast the reconstruction error with the measurement residual.
+
+    The residual is what the recovery optimiser minimises, so it keeps falling
+    as the budget shrinks -- there are fewer constraints left to satisfy. Plotted
+    against ``m`` it therefore suggests that *fewer* measurements are better,
+    which is why quality has to be judged against the ground truth instead. The
+    two panels are the same runs, scored two ways.
+
+    Args:
+        df: Long-format benchmark table.
+        figures_dir: Output directory.
+
+    Returns:
+        Path of the written figure.
+    """
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.6))
+    panels = [
+        ("per_pixel_error", r"$\|\hat{x} - x^*\|^2 / n$", "Reconstruction error (correct)"),
+        (
+            "measurement_residual",
+            r"$\|A\,G(\hat{z}) - y\| / n$",
+            "Measurement residual (misleading)",
+        ),
+    ]
+    for ax, (column, ylabel, title) in zip(axes, panels, strict=True):
+        for method, group in df.groupby("method", sort=False):
+            values = group[column] / (N_PIXELS if column == "measurement_residual" else 1)
+            stats = values.groupby(group["m"]).mean().sort_index()
+            ax.plot(
+                stats.index, stats.to_numpy(), marker="o", ms=4, label=LABELS.get(method, method)
+            )
+        ax.set_yscale("log")
+        ax.set_xlabel("number of measurements $m$")
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.grid(True, which="both", alpha=0.3, linewidth=0.5)
+    axes[0].legend(frameon=False, fontsize=9)
+    fig.suptitle("The same runs scored two ways", fontsize=12)
+    fig.tight_layout()
+    return save_figure(fig, figures_dir / "metric_comparison.png")
+
+
+def sample_efficiency(df: pd.DataFrame, results_dir: Path, reference_m: int = 400) -> Path:
+    """Report how few measurements each prior needs to match Lasso.
+
+    Bora et al. summarise their MNIST result as "25 measurements match Lasso's
+    performance with 400"; this reproduces that statement from our own table.
+
+    Args:
+        df: Long-format benchmark table.
+        results_dir: Output directory.
+        reference_m: Lasso budget used as the reference error level.
+
+    Returns:
+        Path of the written Markdown table.
+    """
+    means = df.groupby(["method", "m"])["per_pixel_error"].mean()
+    path = results_dir / "sample_efficiency.md"
+
+    if "lasso" not in df["method"].values or reference_m not in df["m"].values:
+        path.write_text("Lasso reference not available in this benchmark.\n", encoding="utf-8")
+        return path
+
+    target = means["lasso", reference_m]
+    lines = [
+        f"# Sample efficiency against Lasso at m = {reference_m}",
+        "",
+        f"Lasso reaches a per-pixel error of {target:.4f} with {reference_m} measurements.",
+        "Each learned prior matches or beats that level with:",
+        "",
+        "| prior | measurements needed | speed-up |",
+        "|---|---|---|",
+    ]
+    for method in (m for m in LABELS if m != "lasso" and m in set(df["method"])):
+        budgets = means[method]
+        matching = budgets.index[budgets <= target]
+        if len(matching) == 0:
+            lines.append(f"| {LABELS[method]} | never, in the sweep | — |")
+        else:
+            needed = int(matching.min())
+            lines.append(f"| {LABELS[method]} | {needed} | {reference_m / needed:.1f}x |")
+
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
 def reconstruction_grid(
     recons: dict[str, np.ndarray], df: pd.DataFrame, figures_dir: Path, image_index: int
 ) -> Path:
@@ -84,7 +173,15 @@ def reconstruction_grid(
     import matplotlib.pyplot as plt
 
     methods = list(dict.fromkeys(df["method"]))
-    m_values = sorted(df["m"].unique())
+    # Only budgets present in the archive: a stale .npz beside a fresher csv
+    # should degrade to a smaller grid, not crash the whole figure run.
+    m_values = [
+        m
+        for m in sorted(df["m"].unique())
+        if all(f"{method}__m{m}" in recons for method in methods)
+    ]
+    if not m_values:
+        raise SystemExit("reconstructions.npz does not match benchmark.csv -- re-run the sweep")
     ground_truth = recons["ground_truth"][image_index].reshape(IMAGE_SHAPE[:2])
 
     ncols = len(m_values) + 1
@@ -196,7 +293,12 @@ def main() -> None:
     df = pd.read_csv(csv_path)
     args.figures_dir.mkdir(parents=True, exist_ok=True)
 
-    written = [error_curves(df, args.figures_dir), summary_table(df, args.results_dir)]
+    written = [
+        error_curves(df, args.figures_dir),
+        metric_comparison(df, args.figures_dir),
+        summary_table(df, args.results_dir),
+        sample_efficiency(df, args.results_dir),
+    ]
 
     npz_path = args.results_dir / "reconstructions.npz"
     if npz_path.exists():
