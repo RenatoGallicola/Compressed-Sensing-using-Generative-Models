@@ -17,7 +17,7 @@ The VAE's parameters are optimized via gradient descent, however the sampling of
 The two primary components of the VAE are:
 \paragraph{Encoder}
 \hfill \break
-The encoder’s architecture consists of four 2D convolution layers, one flatten layer and one dense layer. The input received by this module, which is a 1-channel $28\times28$ image, passes through the convolutional layers -- using 32, 64, 64 and 64 filters respectively -- to extract features, then the feature maps is flattened and its dimensionality is reduced using a dense layer; finally the encoder outputs the mean and standard deviation for the latent space distribution and samples the latent vector $z$.
+The encoder’s architecture consists of four 2D convolution layers, one flatten layer and one dense layer. The input received by this module, which is a 1-channel $28\times28$ image, passes through the convolutional layers -- using 32, 64, 64 and 64 filters respectively -- to extract features, then the feature maps is flattened and its dimensionality is reduced using a dense layer; finally the encoder outputs the mean and the log-variance of the latent space distribution and samples the latent vector $z$.
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\linewidth]{assets/encoder_vae.png}
@@ -26,7 +26,7 @@ The encoder’s architecture consists of four 2D convolution layers, one flatten
 \end{figure}
 \paragraph{Decoder}
 \hfill \break
-The decoder’s architecture consists of a dense layer, a reshape layer and two 2D convolution layers. The input of the module is the latent vector that, through the dense and reshape layers, it is transformed back into a tensor, matching the shape of the last convolution layer of the encoder; finally the convolution layers generate the reconstructed image with the same number of channels as the original input image.
+The decoder’s architecture consists of a dense layer, a reshape layer and two 2D transposed convolution layers. The input of the module is the latent vector that, through the dense and reshape layers, it is transformed back into a tensor, matching the shape of the last convolution layer of the encoder; finally the convolution layers generate the reconstructed image with the same number of channels as the original input image.
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\linewidth]{assets/decoder_vae.png}
@@ -41,7 +41,7 @@ L(\theta,\phi;x)=\mathbb{E}_{q_{\phi}(z\vert x)}[log\ p_\theta(x\vert z)]-KL(q_\
 \end{equation}
 The VAE is trained with a custom loop, consisting of three main steps: \textbf{forward pass}, \textbf{loss calculation} and \textbf{backward pass}. During the forward pass, the input data is passed through the encoder to get the mean and log variance of the latent distribution, then the latent vector z is sampled using the reparamentrization trick, and finally z is passed through the decoder to get the reconstructed data. The loss calculation step computes the reconstruction loss between the input data and the reconstructed data, the KL divergence, and then sums them up to compute the total loss. Finally, in the backward pass the total loss is backpropagated to update the parameters of the encoder and decoder.
 \\\\
-The model is trained for 100 epochs using a batch size of 100 and an Adam optimizer \cite{kingma2015adam} with learning rate of 0.001.
+The model is trained for up to 100 epochs using a batch size of 100 and an Adam optimizer \cite{kingma2015adam} with learning rate of 0.001, with early stopping monitoring the loss.
 \\\\
 To test the goodness of the model in the context of compress sensing, two versions of the VAE have been generated: one with the dimension of the latent vector equal to 20, and the other equal to 30. After using both of them, it’s possible to conclude that they lead to good results, as shown in the Results section.
 \subsection{Model results}

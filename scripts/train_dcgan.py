@@ -23,7 +23,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--latent-dim", type=int, default=20, help="latent dimensionality k")
     parser.add_argument("--epochs", type=int, default=50, help="training epochs")
-    parser.add_argument("--batch-size", type=int, default=128, help="mini-batch size")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=32,
+        help="mini-batch size, 32 being the value the shipped checkpoints were trained with",
+    )
     parser.add_argument(
         "--learning-rate", type=float, default=1e-4, help="Adam learning rate for G and D"
     )
