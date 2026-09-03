@@ -87,8 +87,11 @@ changes.
 │   └── make_figures.py          csv -> figures and summary tables
 ├── notebooks/                 narrated walkthrough (01 VAE, 02 DCGAN, 03 Lasso, 04 recovery)
 ├── models/                    pre-trained checkpoints (k = 20 and k = 30)
-├── results/figures/           generated figures
-├── docs/                      project report and architecture diagrams
+├── results/                   benchmark table, summary tables and figures
+├── docs/
+│   ├── report/                  LaTeX source of the report
+│   ├── figures/                 architecture diagrams
+│   └── NAML_project_report.pdf  the compiled report
 └── tests/                     pytest suite covering the package
 ```
 
