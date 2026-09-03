@@ -58,13 +58,18 @@ which will matter on slide 12.
 
 ## 5. The two priors
 
-**Slide.** The table below, plus `docs/figures/vae_decoder_architecture.png` and
-`docs/figures/dcgan_generator_architecture.png`.
+**Slide.** Two tables, one conceptual and one on scale.
 
 | | trained by | used at recovery time |
 |---|---|---|
 | VAE | maximising the ELBO | the decoder |
 | DCGAN | adversarial minimax game | the generator |
+
+| | VAE decoder | DCGAN generator |
+|---|---|---|
+| project | dense to $14^2 	imes 64$ | dense to $3^2 	imes 128$ |
+| upsample | one transposed conv | three transposed convs, 128 to 512 filters |
+| parameters ($k=20$) | 282,177 | 2,921,473 |
 
 **Say.** Two different training principles reaching the same object, a
 differentiable map from a small latent space to image space. The VAE also gives

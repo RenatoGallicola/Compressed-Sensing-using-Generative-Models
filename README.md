@@ -66,10 +66,18 @@ Two priors are trained on MNIST, each at $k = 20$ and $k = 30$:
 | **VAE** | convolutional encoder/decoder, diagonal Gaussian posterior | maximising the ELBO | the **decoder** is $G$ |
 | **DCGAN** | strided conv generator + discriminator | adversarial minimax game | the **generator** is $G$ |
 
-<p align="center">
-  <img src="docs/figures/vae_decoder_architecture.png" width="42%" alt="VAE decoder architecture">
-  <img src="docs/figures/dcgan_generator_architecture.png" width="42%" alt="DCGAN generator architecture">
-</p>
+Both generators map $z \in \mathbb{R}^k$ to a $28 \times 28$ image through a
+projection followed by transposed convolutions, but at very different scales:
+
+| stage | VAE decoder | DCGAN generator |
+|---|---|---|
+| project | dense to $14 \times 14 \times 64$ | dense to $3 \times 3 \times 128$ |
+| upsample | transposed conv, 32 filters, to $28 \times 28$ | transposed convs with 128, 256 and 512 filters, to $6^2$, $14^2$, $28^2$ |
+| output | transposed conv, 1 filter, sigmoid | conv, 1 filter, sigmoid |
+| parameters ($k=20$) | 282,177 | 2,921,473 |
+
+That tenfold difference in size is what makes the DCGAN so much more expensive
+to invert, which turns out to matter as much as accuracy.
 
 The measurement matrix $A$ has i.i.d. $\mathcal{N}(0, 1/m)$ entries, which makes
 it an approximate isometry in expectation ($\mathbb{E}\lVert Ax \rVert^2 = \lVert x \rVert^2$),
@@ -178,7 +186,7 @@ cheap, that cost is decisive on its own.
 ├── results/                   benchmark table, summary tables and figures
 ├── docs/
 │   ├── report/                  LaTeX source of the report
-│   ├── figures/                 architecture diagrams
+│   ├── figures/                 figures used in the docs
 │   └── NAML_project_report.pdf  the compiled report
 └── tests/                     pytest suite covering the package
 ```

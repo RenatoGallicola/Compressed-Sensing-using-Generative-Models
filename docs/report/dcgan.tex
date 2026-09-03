@@ -21,27 +21,55 @@ The two primary components of DCGANs are:
 \hfill \break
 The generator, \( G \), is a convolutional neural network that takes random noise, \( z \), from a latent space and transforms it into a synthetic data sample, \( G(z) \). The objective of the generator is to produce data that is as close as possible to the real data distribution. The generator's loss function is designed to minimize the likelihood of the discriminator correctly identifying the generated data as fake.
 \\
-The actual structure of the generator, inspired by the standard DCGAN presented in \cite{radford2016}:
+The actual structure of the generator, inspired by the standard DCGAN presented in \cite{radford2016}, is reported in table \ref{tab:dcgan generator}.
 
-\begin{figure}[h]
+\begin{table}[H]
     \centering
-    \includegraphics[width=0.7\textwidth]{assets/Generator.png}
-    \caption{Structure of a Deep Convolutional Generative Adversarial Network Generator}
-    \label{fig:gan_generator_structure}
-\end{figure}
+    \begin{tabular}{l c r}
+    \textbf{Layer} & \textbf{Output shape} & \textbf{Parameters} \\
+    \hline
+    Dense & \( 1152 \) & 24{,}192 \\
+    Reshape & \( 3 \times 3 \times 128 \) & -- \\
+    Transposed convolution & \( 6 \times 6 \times 128 \) & 262{,}272 \\
+    LeakyReLU & \( 6 \times 6 \times 128 \) & -- \\
+    Transposed convolution & \( 14 \times 14 \times 256 \) & 524{,}544 \\
+    LeakyReLU & \( 14 \times 14 \times 256 \) & -- \\
+    Transposed convolution & \( 28 \times 28 \times 512 \) & 2{,}097{,}664 \\
+    LeakyReLU & \( 28 \times 28 \times 512 \) & -- \\
+    Convolution & \( 28 \times 28 \times 1 \) & 12{,}801 \\
+    \hline
+    \textbf{Total} & & \textbf{2{,}921{,}473} \\
+    \end{tabular}
+    \caption{Structure of the DCGAN generator, shown for a latent dimension of 20. With a latent dimension of 30 only the first dense layer changes, and the total becomes 2{,}932{,}993 parameters.}
+    \label{tab:dcgan generator}
+\end{table}
 
 \paragraph{Discriminator}
 \hfill \break
 The discriminator, \( D \), is another convolutional neural network that evaluates data and assigns a probability that a given sample comes from the real data distribution rather than the generator. The discriminator's loss function aims to maximize the likelihood of correctly classifying real and fake data.
 \\
-The actual structure of the discriminator, inspired by the standard DCGAN presented in \cite{radford2016}:
+The actual structure of the discriminator, inspired by the standard DCGAN presented in \cite{radford2016}, is reported in table \ref{tab:dcgan discriminator}.
 
-\begin{figure}[h]
+\begin{table}[H]
     \centering
-    \includegraphics[width=0.7\textwidth]{assets/Discriminator.png}
-    \caption{Structure of a Deep Convolutional Generative Adversarial Network Discriminator}
-    \label{fig:gan_discriminator_structure}
-\end{figure}
+    \begin{tabular}{l c r}
+    \textbf{Layer} & \textbf{Output shape} & \textbf{Parameters} \\
+    \hline
+    Convolution & \( 14 \times 14 \times 64 \) & 1{,}088 \\
+    LeakyReLU & \( 14 \times 14 \times 64 \) & -- \\
+    Convolution & \( 7 \times 7 \times 128 \) & 131{,}200 \\
+    LeakyReLU & \( 7 \times 7 \times 128 \) & -- \\
+    Convolution & \( 4 \times 4 \times 128 \) & 262{,}272 \\
+    LeakyReLU & \( 4 \times 4 \times 128 \) & -- \\
+    Flatten & \( 2048 \) & -- \\
+    Dropout & \( 2048 \) & -- \\
+    Dense & \( 1 \) & 2{,}049 \\
+    \hline
+    \textbf{Total} & & \textbf{396{,}609} \\
+    \end{tabular}
+    \caption{Structure of the DCGAN discriminator}
+    \label{tab:dcgan discriminator}
+\end{table}
 
 \subsubsection{Training Process}
 
