@@ -68,13 +68,14 @@ def error_curves(df: pd.DataFrame, figures_dir: Path) -> Path:
 
 
 def metric_comparison(df: pd.DataFrame, figures_dir: Path) -> Path:
-    """Contrast the reconstruction error with the measurement residual.
+    """Plot the two quantities a recovery run produces, side by side.
 
-    The residual is what the recovery optimiser minimises, so it keeps falling
-    as the budget shrinks -- there are fewer constraints left to satisfy. Plotted
-    against ``m`` it therefore suggests that *fewer* measurements are better,
-    which is why quality has to be judged against the ground truth instead. The
-    two panels are the same runs, scored two ways.
+    The left panel is the reconstruction error against the ground truth, the
+    metric every result in this project is reported with. The right panel is the
+    measurement residual, the objective the optimiser actually minimises: it
+    falls as the budget shrinks because fewer constraints remain to satisfy, so
+    it tracks how well the optimisation converged rather than how good the
+    reconstruction is. Both come from the same runs.
 
     Args:
         df: Long-format benchmark table.
@@ -87,11 +88,15 @@ def metric_comparison(df: pd.DataFrame, figures_dir: Path) -> Path:
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.6))
     panels = [
-        ("per_pixel_error", r"$\|\hat{x} - x^*\|^2 / n$", "Reconstruction error (correct)"),
+        (
+            "per_pixel_error",
+            r"$\|\hat{x} - x^*\|^2 / n$",
+            "Reconstruction error, against ground truth",
+        ),
         (
             "measurement_residual",
             r"$\|A\,G(\hat{z}) - y\| / n$",
-            "Measurement residual (misleading)",
+            "Measurement residual, the recovery objective",
         ),
     ]
     for ax, (column, ylabel, title) in zip(axes, panels, strict=True):
@@ -107,7 +112,7 @@ def metric_comparison(df: pd.DataFrame, figures_dir: Path) -> Path:
         ax.set_title(title)
         ax.grid(True, which="both", alpha=0.3, linewidth=0.5)
     axes[0].legend(frameon=False, fontsize=9)
-    fig.suptitle("The same runs scored two ways", fontsize=12)
+    fig.suptitle("Reconstruction error and optimisation residual", fontsize=12)
     fig.tight_layout()
     return save_figure(fig, figures_dir / "metric_comparison.png")
 

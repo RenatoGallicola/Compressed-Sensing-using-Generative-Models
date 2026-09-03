@@ -146,36 +146,33 @@ The notebooks are committed **with their outputs**, so every plot is readable
 straight from GitHub without installing anything. They were executed top to
 bottom against the checkpoints and the benchmark table in this repository.
 
-## Notes on the method, and what changed from the original report
+## Method notes
 
-The experiment was re-implemented from the notebooks that produced
-[the report](docs/NAML_project_report.pdf). Four things were corrected or made
-explicit along the way; the qualitative conclusions are unchanged, the numbers
-are not directly comparable.
+A few implementation choices determine what the numbers mean, so they are worth
+stating explicitly.
 
-1. **Error is now measured against the ground truth.** The original curves
-   plotted the *measurement residual* $\lVert A G(\hat z) - y \rVert$, which is
-   what the optimiser minimises. It shrinks as $m$ decreases simply because
-   there are fewer constraints to satisfy, so it cannot be compared across
-   budgets or against Lasso (whose curve did use the reconstruction error).
-   Everything here reports $\lVert \hat x - x^{\ast} \rVert^2 / n$, the metric used
-   by Bora et al.
-2. **The measurement matrix is scaled by $1/\sqrt{m}$, not $1/m$.** Only the
-   former gives $\mathbb{E}\lVert Ax \rVert^2 = \lVert x \rVert^2$; with $1/m$
-   the measurements shrink as the budget grows, which distorts both the noise
-   level and any comparison across $m$.
-3. **Latent codes are initialised from $\mathcal{N}(0, I)$**, the prior the
-   generators were actually trained under, instead of $\mathcal{N}(0, 10^{-4}I)$.
-   Starting near the origin biases the search towards the blurry centre of the
-   latent space.
-4. **Averaging over images and matching the inputs across methods.** Curves are
-   averaged over 10 stratified test digits (one per class) rather than a single
-   image, and every method sees the same $A$, the same noise and the same
-   targets at each budget.
+**The measurement matrix is scaled by $1/\sqrt{m}$.** Entries are drawn i.i.d.
+from $\mathcal{N}(0, 1/m)$, which makes $A$ an approximate isometry in
+expectation. Measurement space and signal space then stay on the same scale as
+the budget changes, and so does the effective noise level.
 
-The checkpoints were also re-saved in the Keras 3 format: the originals were
-legacy HDF5 files with a `.keras` extension and no longer load on current
-TensorFlow. Weights are bit-identical.
+**Quality is measured against the ground truth.** Every curve reports
+$\lVert \hat x - x^{\ast} \rVert^2 / n$, the metric used by Bora et al. The
+measurement residual $\lVert A G(\hat z) - y \rVert$ is the quantity the
+optimiser minimises, and it falls as $m$ shrinks simply because fewer
+constraints remain to satisfy, so it is recorded as an optimisation diagnostic
+and never as a score.
+
+**Latent codes are initialised from $\mathcal{N}(0, I)$**, the prior the
+generators were trained under. Starting much closer to the origin biases the
+search towards the blurry centre of the latent space.
+
+**Every method sees the same inputs.** At each budget the same measurement
+matrix, the same noise draw and the same ten stratified test digits, one per
+class, are handed to Lasso and to each generative prior, and the curves are
+averages over those ten images. Following Bora et al., the noise vector has a
+fixed expected norm of 0.1 at every budget, so the per-component standard
+deviation is $0.1/\sqrt{m}$.
 
 ### Limitations
 

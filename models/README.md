@@ -23,11 +23,11 @@ from csgm.models import load_generator
 G = load_generator("dcgan", 20)  # or load_generator("vae", 30)
 ```
 
-## A note on the file format
+## File format
 
-These checkpoints were originally written by Keras 2 as HDF5 files carrying a
-`.keras` extension. Keras 3 dispatches on the extension and expects a zip
-archive, so it refused to open them (`Conv2DTranspose` also gained an
-incompatible `groups` argument in the meantime). They were re-saved into the
-current format by rebuilding the architectures in `csgm.models` and loading the
-legacy weights topologically; outputs are bit-identical to the originals.
+The archives are in the Keras 3 format and load with the TensorFlow version
+pinned in `requirements.txt`. Note that Keras dispatches on the file extension:
+a `.keras` file holding HDF5 content, which is what Keras 2 used to write, is
+rejected by Keras 3 with a confusing "not a zip file" error. If you hit that,
+rebuild the architecture with `csgm.models` and load the weights from a copy of
+the file renamed to `.h5`.

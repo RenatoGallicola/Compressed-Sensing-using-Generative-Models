@@ -16,18 +16,10 @@
 | `figures/error_vs_measurements.png` | mean per-pixel error vs. $m$, one curve per prior |
 | `figures/reconstruction_grid.png` | one digit reconstructed by every method at every budget |
 | `figures/prior_samples.png` | unconditional samples from each generator |
-| `figures/metric_comparison.png` | the same runs scored as reconstruction error and as measurement residual |
+| `figures/metric_comparison.png` | reconstruction error and optimisation residual for the same runs |
 | `summary.md`, `summary.csv` | mean per-pixel error per method and budget |
 | `sample_efficiency.md` | measurements each prior needs to match Lasso at m = 400 |
 
 `benchmark.csv` and `summary.*` are committed so the numbers can be checked
 without re-running the sweep; `reconstructions.npz` is not, since it is bulky
 and fully reproducible from the seed recorded in the README.
-
-## Legacy figures
-
-`figures/legacy_*.png` are the plots that appear in
-[the original report](../docs/NAML_project_report.pdf). They are kept for
-provenance, but note that their y-axis is the **measurement residual**
-$\lVert A G(\hat z) - y \rVert$ rather than the reconstruction error against the
-ground truth; see the "what changed" section of the README.
