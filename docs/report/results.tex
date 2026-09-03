@@ -8,7 +8,7 @@ Given the trained models, we first visually examined the results of standard sen
     \centering
     \includegraphics[width=0.7\textwidth]{assets/example generation, M= 300 , 1000 epochs adam.png}
     \caption{Sample image retrieval from 300 measurements using a latent dimension of 20 with a DCGAN model}
-    \label{fig:MNIST dataset}
+    \label{fig:dcgan retrieval m300}
 \end{figure}
 
 \subsection{Baseline Performance Using LASSO}
@@ -28,7 +28,7 @@ From our experiments, we observed that the performance of LASSO is inadequate fo
     \label{fig:LASSO performance}
 \end{figure}
 \\
-The figure (6.3) illustrates the reconstructed images as the number of measurements \( M \) increases.
+Figure \ref{fig:LASSO reconstructions} illustrates the reconstructed images as the number of measurements \( M \) increases.
 \begin{figure}[hbt!]
     \centering
     \includegraphics[width=0.7\textwidth]{assets/lasso reconstructions.png}
@@ -42,7 +42,7 @@ We observe that more than 400 measurements are needed for coherent reconstructio
 
 \subsection{Improved Performance Using Generative Networks}
 
-Generative networks, in both VAE and DCGAN forms, significantly enhance performance, requiring far fewer measurements to achieve the same quality of reconstruction as LASSO. The following example (fig. 6.4) demonstrates the generation of images with a given number of measurements \( M \).
+Generative networks, in both VAE and DCGAN forms, significantly enhance performance, requiring far fewer measurements to achieve the same quality of reconstruction as LASSO. The following example, figure \ref{fig:DCGAN generation z = 20}, demonstrates the generation of images with a given number of measurements \( M \).
 \\\\
 We note that the generated number matches the original with as few as 20 measurements.
 \\\\
@@ -59,12 +59,12 @@ Furthermore, we can see how the four models (VAEs with 20 and 30 latent vector d
     \centering
     \includegraphics[width=1\linewidth]{assets/losses.png}
     \caption{Losses per pixel using generative models}
-    \label{fig:enter-label}
+    \label{fig:generative losses}
 \end{figure}
 \hfill \break
 To ensure a fair comparison of the models' behavior, we trained them on the same machine for a similar number of epochs.
 \\
-From the graph above, we can conclude that all the involved generative networks perform significantly better in terms of loss per pixel with respect to the reconstruction obtained with LASSO (figure 6.2 for reference). Among the four of them, the DCGAN with latent dimension equal to 20 is the one that performs better with few measurements, while as the number of measurements increases we can notice that the models tend to achieve the same performances, settling down on an loss of 0.1 - 0.2 after around 400 measurements.
+From the graph above, we can conclude that all the involved generative networks perform significantly better in terms of loss per pixel with respect to the reconstruction obtained with LASSO, figure \ref{fig:LASSO performance} for reference. Among the four of them, the DCGAN with latent dimension equal to 20 is the one that performs better with few measurements, while as the number of measurements increases we can notice that the models tend to achieve the same performances, settling down on an loss of 0.1 - 0.2 after around 400 measurements.
 \\\\
 DCGAN is a suitable choice for compressed sensing in a scenario in which high precision and few measurements are required.
 \\
