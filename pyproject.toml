@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "csgm"
+version = "1.0.0"
+description = "Compressed sensing with deep generative priors (DCGAN / VAE) on MNIST"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Renato Gallicola" },
+    { name = "Matteo Forlivesi" },
+]
+keywords = ["compressed-sensing", "generative-models", "vae", "gan", "inverse-problems"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "tensorflow>=2.16,<2.18",
+    "numpy>=1.26,<2",
+    "scipy>=1.11",
+    "scikit-learn>=1.3",
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6", "jupyter>=1.0", "nbstripout>=0.7"]
+
+[project.urls]
+Repository = "https://github.com/RenatoGallicola/Compressed-Sensing-using-Generative-Models"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "D", "NPY", "RUF"]
+ignore = ["D105", "D107", "D203", "D213"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D100", "D103"]
+"scripts/*" = ["D100"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

@@ -1,0 +1,13 @@
+# Normalise line endings: LF in the repository, native in the working copy.
+* text=auto eol=lf
+
+# Binary assets -- never diffed or line-ending converted.
+*.keras binary
+*.npz   binary
+*.png   binary
+*.jpg   binary
+*.pdf   binary
+
+# Notebooks are committed without outputs (see .pre-commit-config.yaml), but
+# still diff better with a JSON-aware driver when one is configured.
+*.ipynb text

@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+title: Compressed Sensing using Generative Models
+message: If you use this code, please cite both this repository and the original paper by Bora et al.
+type: software
+authors:
+  - given-names: Renato
+    family-names: Gallicola
+  - given-names: Matteo
+    family-names: Forlivesi
+repository-code: https://github.com/RenatoGallicola/Compressed-Sensing-using-Generative-Models
+abstract: >-
+  Reproduction and extension of Bora et al. (2017), "Compressed Sensing using
+  Generative Models", on MNIST. A DCGAN generator and a VAE decoder are used as
+  priors for recovering images from random Gaussian measurements, and compared
+  against a Lasso/DCT sparsity baseline. Course project for Numerical Analysis
+  for Machine Learning, MSc Computer Science and Engineering, Politecnico di
+  Milano.
+keywords:
+  - compressed sensing
+  - generative models
+  - variational autoencoder
+  - generative adversarial network
+  - inverse problems
+license: MIT
+date-released: 2024-07-17
+references:
+  - type: conference-paper
+    title: Compressed Sensing using Generative Models
+    authors:
+      - family-names: Bora
+        given-names: Ashish
+      - family-names: Jalal
+        given-names: Ajil
+      - family-names: Price
+        given-names: Eric
+      - family-names: Dimakis
+        given-names: Alexandros G.
+    year: 2017
+    collection-title: Proceedings of the 34th International Conference on Machine Learning
+    url: https://arxiv.org/abs/1703.03208
