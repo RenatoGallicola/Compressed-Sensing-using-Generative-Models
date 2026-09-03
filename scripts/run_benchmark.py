@@ -17,6 +17,7 @@ Example:
 from __future__ import annotations
 
 import argparse
+import json
 import time
 from pathlib import Path
 
@@ -80,7 +81,32 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir", type=Path, default=RESULTS_DIR, help="where to write csv/npz"
     )
+    parser.add_argument(
+        "--merge",
+        action="store_true",
+        help=(
+            "update an existing benchmark in place: rows and reconstructions for the "
+            "methods being run are replaced, everything else is kept. Refuses to run "
+            "if the recorded protocol differs, so merged results stay comparable"
+        ),
+    )
     return parser.parse_args()
+
+
+def protocol(args) -> dict:
+    """The settings that have to match for two runs to be poolable."""
+    return {
+        "n_images": args.n_images,
+        "steps": args.steps,
+        "restarts": args.restarts,
+        "learning_rate": args.learning_rate,
+        "l2_penalty": args.l2_penalty,
+        "noise_norm": args.noise_norm,
+        "noise_std": args.noise_std,
+        "lasso_alpha": args.lasso_alpha,
+        "seed": args.seed,
+        "m_values": sorted(args.m_values),
+    }
 
 
 def parse_method(method: str) -> tuple[str, int | None]:
@@ -184,9 +210,33 @@ def main() -> None:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = args.output_dir / "benchmark.csv"
     npz_path = args.output_dir / "reconstructions.npz"
-    pd.DataFrame(rows).to_csv(csv_path, index=False)
+    meta_path = args.output_dir / "benchmark_meta.json"
+    table = pd.DataFrame(rows)
+
+    if args.merge and csv_path.exists():
+        recorded = json.loads(meta_path.read_text(encoding="utf-8"))["protocol"]
+        current = protocol(args)
+        differing = {k: (recorded.get(k), v) for k, v in current.items() if recorded.get(k) != v}
+        if differing:
+            raise SystemExit(f"refusing to merge, the protocol differs: {differing}")
+
+        previous = pd.read_csv(csv_path)
+        table = pd.concat([previous[~previous["method"].isin(args.methods)], table])
+        table = table.sort_values(["method", "m", "image"]).reset_index(drop=True)
+
+        with np.load(npz_path) as archive:
+            merged = dict(archive)
+        merged.update(reconstructions)
+        reconstructions = merged
+        print(f"merged {args.methods} into the existing benchmark")
+
+    table.to_csv(csv_path, index=False)
     np.savez_compressed(npz_path, **reconstructions)
-    print(f"\nwrote {csv_path}\nwrote {npz_path}")
+    meta_path.write_text(
+        json.dumps({"protocol": protocol(args), "methods": sorted(set(table["method"]))}, indent=2),
+        encoding="utf-8",
+    )
+    print(f"\nwrote {csv_path}\nwrote {npz_path}\nwrote {meta_path}")
 
 
 if __name__ == "__main__":

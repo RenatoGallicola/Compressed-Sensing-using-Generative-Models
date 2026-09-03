@@ -162,6 +162,74 @@ def sample_efficiency(df: pd.DataFrame, results_dir: Path, reference_m: int = 40
     return path
 
 
+def lambda_sweep(results_dir: Path, figures_dir: Path) -> list[Path]:
+    """Plot the effect of the latent regulariser, if the sweep has been run.
+
+    Two panels: what the penalty does to the reconstruction error, and what it
+    does to the norm of the recovered latent code, which is the quantity it acts
+    on directly.
+
+    Args:
+        results_dir: Directory holding ``lambda_sweep.csv``.
+        figures_dir: Output directory.
+
+    Returns:
+        The files written, empty if the sweep has not been run.
+    """
+    import matplotlib.pyplot as plt
+
+    path = results_dir / "lambda_sweep.csv"
+    if not path.exists():
+        return []
+
+    df = pd.read_csv(path)
+    methods = sorted(df["method"].unique())
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.6))
+
+    for column, ax, ylabel, logy in (
+        ("per_pixel_error", axes[0], "reconstruction error per pixel", True),
+        ("latent_norm", axes[1], r"$\|\hat{z}\|_2$", False),
+    ):
+        for method in methods:
+            for penalty, group in df[df["method"] == method].groupby("l2_penalty"):
+                stats = group.groupby("m")[column].mean().sort_index()
+                ax.plot(
+                    stats.index,
+                    stats.to_numpy(),
+                    marker="o",
+                    ms=3,
+                    linestyle="-" if method.endswith("30") else "--",
+                    label=rf"{LABELS.get(method, method)}, $\lambda$={penalty:g}",
+                )
+        ax.set_xscale("log")
+        ax.set_xticks(sorted(df["m"].unique()))
+        ax.get_xaxis().set_major_formatter(plt.matplotlib.ticker.ScalarFormatter())
+        ax.tick_params(axis="x", labelsize=8)
+        if logy:
+            ax.set_yscale("log")
+        ax.set_xlabel("number of measurements $m$")
+        ax.set_ylabel(ylabel)
+        ax.grid(True, which="both", alpha=0.3, linewidth=0.5)
+    axes[0].set_title("Reconstruction error")
+    axes[1].set_title("Norm of the recovered latent code")
+    axes[0].legend(frameon=False, fontsize=7, ncol=2)
+    fig.suptitle("Effect of the latent regulariser", fontsize=12)
+    fig.tight_layout()
+    figure = save_figure(fig, figures_dir / "lambda_sweep.png")
+
+    pivot = df.pivot_table(
+        index="m", columns=["method", "l2_penalty"], values="per_pixel_error", aggfunc="mean"
+    )
+    table = results_dir / "lambda_sweep.md"
+    table.write_text(
+        "# Reconstruction error per pixel by latent penalty\n\n"
+        + pivot.to_markdown(floatfmt=".4f")
+        + "\n",
+        encoding="utf-8",
+    )
+    return [figure, table]
+
+
 def reconstruction_grid(
     recons: dict[str, np.ndarray], df: pd.DataFrame, figures_dir: Path, image_index: int
 ) -> Path:
@@ -314,6 +382,8 @@ def main() -> None:
     samples = prior_samples(args.figures_dir)
     if samples is not None:
         written.append(samples)
+
+    written.extend(lambda_sweep(args.results_dir, args.figures_dir))
 
     for path in written:
         print(f"wrote {path}")

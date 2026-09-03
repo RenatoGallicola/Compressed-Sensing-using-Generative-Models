@@ -1,0 +1,32 @@
+{
+  "protocol": {
+    "n_images": 10,
+    "steps": 1000,
+    "restarts": 10,
+    "learning_rate": 0.01,
+    "l2_penalty": 0.0,
+    "noise_norm": 0.1,
+    "noise_std": null,
+    "lasso_alpha": 1e-05,
+    "seed": 1337,
+    "m_values": [
+      10,
+      25,
+      50,
+      75,
+      100,
+      200,
+      300,
+      400,
+      500,
+      750
+    ]
+  },
+  "methods": [
+    "dcgan-20",
+    "dcgan-30",
+    "lasso",
+    "vae-20",
+    "vae-30"
+  ]
+}
