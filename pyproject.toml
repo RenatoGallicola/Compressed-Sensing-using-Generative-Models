@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.6", "jupyter>=1.0", "nbstripout>=0.7"]
+dev = ["pytest>=8.0", "ruff>=0.6", "jupyter>=1.0"]
 
 [project.urls]
 Repository = "https://github.com/RenatoGallicola/Compressed-Sensing-using-Generative-Models"

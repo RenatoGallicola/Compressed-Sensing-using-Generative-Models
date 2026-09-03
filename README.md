@@ -142,8 +142,9 @@ python scripts/make_figures.py
 Every random draw (measurement matrices, noise, latent initialisations and the
 choice of test images) is derived from a single `--seed`.
 
-The notebooks are stored **without outputs** so diffs stay readable; run them to
-regenerate the plots, or read the figures in [`results/figures/`](results/figures).
+The notebooks are committed **with their outputs**, so every plot is readable
+straight from GitHub without installing anything. They were executed top to
+bottom against the checkpoints and the benchmark table in this repository.
 
 ## Notes on the method, and what changed from the original report
 
