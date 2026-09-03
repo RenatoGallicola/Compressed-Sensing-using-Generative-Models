@@ -1,0 +1,30 @@
+\section{Conclusions}
+\vspace{1cm}
+This project aimed to assess the performance of compressed sensing using two deep learning models, VAE and GAN, on the MNIST dataset. The models' efficacy in image reconstruction from highly compressed measurements was evaluated and compared to traditional methods like LASSO.
+\\\\
+\textbf{Key Findings:}
+
+\begin{enumerate}
+    \item \textbf{Deep Learning Models Enhance Reconstruction:}
+    \begin{itemize}
+        \item Both VAE and GAN significantly outperformed traditional methods in terms of reconstruction quality with fewer measurements.
+        \item VAEs achieved comparable performance to LASSO with substantially fewer measurements (e.g., 25 vs. 400).
+        \item GANs performed slightly better than VAEs, showing improved reconstruction as the number of measurements increased, though benefits plateaued after around 400 measurements.
+    \end{itemize}
+    \item \textbf{Generative Models in Compressed Sensing:}
+    \begin{itemize}
+        \item The success of these models in reconstructing images from minimal data showcases the potential of integrating generative models with compressed sensing techniques.
+        \item The ability of these models to leverage learned data distributions enables high-quality reconstructions even in resource-constrained environments.
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Future Directions:}
+
+The promising results suggest several avenues for further research:
+\begin{itemize}
+    \item \textbf{Optimizing Measurement Matrices:} Future work could explore designing or learning measurement matrices tailored to specific datasets and reconstruction tasks.
+    \item \textbf{Exploring Alternative Architectures:} Investigating other deep learning architectures and their applicability to compressed sensing could yield further improvements.
+    \item \textbf{Applications Beyond MNIST:} Applying these methods to more complex and diverse datasets will test the generalizability and robustness of the models.
+\end{itemize}
+\vspace{0.01cm}
+In conclusion, integrating deep learning with compressed sensing provides a powerful approach for efficient data reconstruction. The demonstrated performance improvements open up new possibilities for applications in various fields, such as medical imaging, remote sensing, and beyond. The integration of these techniques can lead to better utilization of limited data, enhancing the capabilities of modern imaging systems.

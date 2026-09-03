@@ -1,0 +1,13 @@
+\section{Introduction}
+\vspace{1cm}
+Compressed sensing is a signal processing technique that enables the reconstruction of a signal from a small number of measurements. Given the measurement $y$, the measurements matrix $A\in\mathbb{R}^{m\times n}$ and the noise $\eta\in\mathbb{R}^m$, the goal is to estimate the vector $x^*\in\mathbb{R}^n$ such that:
+\begin{equation}
+    y=Ax^*+\eta
+\end{equation}
+Since $m\ll n$, this system is underdetermined, then it is not possible to find a unique solution. The Nyquist–Shannon sampling theorem requires a certain amount of samples to perfectly reconstruct a signal, so compressed sensing exploits some features of the signal to address this problem in a context where the conditions of the aforementioned theorem are not met.
+\\\\
+The standard version of the algorithm assumes the signal to be $k$-sparse, meaning that it has only $k$ coefficients different from zero when represented in some domain. This assumption allows the signal retrieval through the use of algorithms for solving minimization problems, such as LASSO \cite{tibshirani1996} for the $L^1$ norm minimization, under conditions on $A$ established by the classical compressed sensing literature \cite{candes2006,donoho2006}.
+\\\\
+Following Bora et al. \cite{bora2017}, this experiment shifts from sparsity to structures derived from generative models, with the aim of assessing the goodness of these models when employed in compressed sensing. They feature a generator that maps vectors from  a low dimensional to a high dimensional space, so from $z\in\mathbb{R}^k$ to $G(z)\in\mathbb{R}^n$. By training the generator, with high probability it will output vectors similar to the ones belonging to the dataset it has been trained on.
+\\\\
+The idea behind the use of generative models in the context of compressed sensing is that we expect the vector $x^*$ to be close to some $G(z)$, which can be found with an optimization algorithm based on gradient descent, that will be later discussed in detail.

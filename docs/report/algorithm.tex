@@ -1,0 +1,30 @@
+\section{Algorithm Explanation}
+\vspace{1cm}
+Generative models offer a powerful approach for compressed sensing by leveraging the structure of the data distribution.
+\\
+Independently from the above mentioned models, a generative model is defined by a deterministic function \( G: \mathbb{R}^k \to \mathbb{R}^n \) and a distribution \( P_Z \) over \( z \in \mathbb{R}^k \). The model maps a low-dimensional latent vector \( z \) (decided by us as the latent dimension) to the high-dimensional sample space (the final generated image). The compressed sensing task involves finding a vector \( z \) in the latent space such that the corresponding generated sample \( G(z) \) matches the observed measurements \( y \).
+\\
+The measurement matrix \( A \) is drawn at random, with entries sampled independently from a Gaussian distribution \( N(0, 1/m) \). With this scaling the operator preserves norms in expectation, since \( \mathbb{E}\|Ax\|^2 = \|x\|^2 \) for every \( x \), and the magnitude of the measurement error remains comparable across different values of \( m \).
+\\
+The objective function to be minimized is:\\
+\begin{equation}
+\text{loss}(z) = \| AG(z) - y \|^2.
+\end{equation}
+Bora et al. \cite{bora2017} also consider a regularized version of this objective, obtained by adding a term \( \lambda \|z\|^2 \) that keeps the solution inside the region where the prior \( P_Z \) places most of its mass. In our experiments we set \( \lambda = 0 \), so that the reconstruction depends on the generator alone.
+\\
+Optimization is performed using gradient descent on \( z \) with the Adam algorithm \cite{kingma2015adam} for optimizing descent. If \( G \) is differentiable, gradients of the loss with respect to \( z \) can be computed using back-propagation. The process involves iteratively updating \( z \) to minimize the measurement error. Upon convergence to \( \hat{z} \), the reconstruction of \( x^* \) is given by \( G(\hat{z}) \).
+\\\\
+The algorithm can be summarized as follows:
+\begin{enumerate}
+    \item Initialize \( z \) by sampling from the distribution \( P_Z \), which for both models is the standard normal \( N(0, I) \) used during training.
+    \item Compute the loss: \( \text{loss}(z) = \| AG(z) - y \|^2 \).
+    \item Use gradient descent to update \( z \) to minimize the loss.
+    \item Repeat until convergence.
+    \item The reconstructed signal is \( \hat{x} = G(\hat{z}) \).
+\end{enumerate}
+This method leverages the data prior encoded in the generative model to achieve high-quality reconstructions with fewer measurements compared to traditional compressed sensing methods.
+\\\\
+A theoretical justification is given in \cite{bora2017}. If \( G \) is \( L \)-Lipschitz, a number of random Gaussian measurements of the order of \( k \log L \) is sufficient to guarantee that the reconstruction error is close to the smallest error achievable by any vector in the range of \( G \). The number of measurements required therefore scales with the latent dimension \( k \) and not with the ambient dimension \( n \), which is the reason why so few measurements are enough.
+\\
+In order to improve convergence we performed a thousand gradient steps for each of ten random restarts, and we kept the attempt that presented the smallest measurement error at the end of the approximation. These steps are not training epochs: the weights of \( G \) are frozen and the only variable that gets updated is the latent vector \( z \).
+

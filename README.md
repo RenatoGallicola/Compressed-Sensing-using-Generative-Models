@@ -29,8 +29,8 @@ $$y = A x^{\ast} + \eta, \qquad A \in \mathbb{R}^{m \times n}, \quad \eta \sim \
 
 With $m \ll n$ the system is underdetermined and has infinitely many solutions,
 so recovery is only possible by assuming *structure*. Classical theory assumes
-**sparsity in a fixed basis** — $x^{\ast} = \Psi\theta$ with few non-zero
-$\theta_i$ — and recovers $x^{\ast}$ with an $\ell_1$ program such as Lasso.
+**sparsity in a fixed basis**, $x^{\ast} = \Psi\theta$ with few non-zero
+$\theta_i$, and recovers $x^{\ast}$ with an $\ell_1$ program such as Lasso.
 
 This project replaces that assumption with a much stronger, *learned* one: that
 $x^{\ast}$ lies near the range of a trained generator $G : \mathbb{R}^k \to \mathbb{R}^n$.
@@ -106,7 +106,7 @@ pytest -q
 > **NumPy is pinned below 2.0.** The TensorFlow 2.16/2.17 wheels are built
 > against the NumPy 1.x ABI and fail to import otherwise.
 
-Reconstruct a digit from 100 measurements — 13% of its 784 pixels:
+Reconstruct a digit from 100 measurements, 13% of its 784 pixels:
 
 ```python
 from csgm import gaussian_measurement_matrix, load_mnist, measure, per_pixel_l2, recover
@@ -139,8 +139,8 @@ python scripts/make_figures.py
 
 `run_benchmark.py` writes `results/benchmark.csv`, one row per
 (method, $m$, image), so the analysis can be redone without re-running the sweep.
-Every random draw — measurement matrices, noise, latent initialisations, the
-choice of test images — is derived from a single `--seed`.
+Every random draw (measurement matrices, noise, latent initialisations and the
+choice of test images) is derived from a single `--seed`.
 
 The notebooks are stored **without outputs** so diffs stay readable; run them to
 regenerate the plots, or read the figures in [`results/figures/`](results/figures).
@@ -154,7 +154,7 @@ are not directly comparable.
 
 1. **Error is now measured against the ground truth.** The original curves
    plotted the *measurement residual* $\lVert A G(\hat z) - y \rVert$, which is
-   what the optimiser minimises — it shrinks as $m$ decreases simply because
+   what the optimiser minimises. It shrinks as $m$ decreases simply because
    there are fewer constraints to satisfy, so it cannot be compared across
    budgets or against Lasso (whose curve did use the reconstruction error).
    Everything here reports $\lVert \hat x - x^{\ast} \rVert^2 / n$, the metric used
@@ -185,7 +185,7 @@ TensorFlow. Weights are bit-identical.
 - **MNIST is easy.** Digits are a low-dimensional, near-binary manifold; the
   gap over Lasso would narrow on richer datasets.
 - **Recovery is expensive.** Each reconstruction runs 1000 gradient steps
-  × 10 restarts through the generator — orders of magnitude slower than a
+  by 10 restarts through the generator, orders of magnitude slower than a
   single convex solve.
 
 ## References
@@ -205,7 +205,7 @@ TensorFlow. Weights are bit-identical.
 
 ## Authors
 
-**Renato Gallicola** · **Matteo Forlivesi** — Politecnico di Milano.
+**Renato Gallicola** and **Matteo Forlivesi**, Politecnico di Milano.
 
 Released under the [MIT License](LICENSE). MNIST is distributed under the
 [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) license.

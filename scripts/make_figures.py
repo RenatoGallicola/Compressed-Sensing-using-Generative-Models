@@ -147,7 +147,7 @@ def sample_efficiency(df: pd.DataFrame, results_dir: Path, reference_m: int = 40
         budgets = means[method]
         matching = budgets.index[budgets <= target]
         if len(matching) == 0:
-            lines.append(f"| {LABELS[method]} | never, in the sweep | — |")
+            lines.append(f"| {LABELS[method]} | never, in the sweep | n/a |")
         else:
             needed = int(matching.min())
             lines.append(f"| {LABELS[method]} | {needed} | {reference_m / needed:.1f}x |")

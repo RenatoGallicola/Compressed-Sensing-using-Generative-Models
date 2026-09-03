@@ -1,6 +1,6 @@
 # Pre-trained checkpoints
 
-Keras 3 (`.keras`) archives. At recovery time only the **generators** are used —
+Keras 3 (`.keras`) archives. At recovery time only the **generators** are used:
 they are the prior $G$ that `csgm.recovery.recover` inverts. The discriminators
 are kept so the adversarial training can be resumed or audited.
 
@@ -10,8 +10,8 @@ are kept so the adversarial training can be resumed or audited.
 | `vae_decoder_dim30.keras` | generator $G$ | 30 | `scripts/train_vae.py --latent-dim 30 --epochs 100` |
 | `gan_gen_dim20.keras` | generator $G$ | 20 | `scripts/train_dcgan.py --latent-dim 20 --epochs 50` |
 | `gan_gen_dim30.keras` | generator $G$ | 30 | `scripts/train_dcgan.py --latent-dim 30 --epochs 50` |
-| `gan_disc_dim20.keras` | discriminator $D$ | — | as above |
-| `gan_disc_dim30.keras` | discriminator $D$ | — | as above |
+| `gan_disc_dim20.keras` | discriminator $D$ | n/a | as above |
+| `gan_disc_dim30.keras` | discriminator $D$ | n/a | as above |
 
 All four generators map $z \in \mathbb{R}^k$ to a $28 \times 28 \times 1$ image
 with sigmoid outputs in $[0, 1]$, and were trained on MNIST scaled to the same

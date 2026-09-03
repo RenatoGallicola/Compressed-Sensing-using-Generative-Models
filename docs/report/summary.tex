@@ -1,0 +1,56 @@
+\section{Summary}
+
+\vspace{1cm}
+
+\subsection{Introduction}
+
+This experiment aims to evaluate the performance of compressed sensing using two models on the MNIST dataset: a Variational Auto-encoder (VAE) and a Generative Adversarial Network (GAN). The focus is on image reconstruction from compressed measurements. The MNIST dataset consists of 60,000 training images and 10,000 test images of handwritten digits, each of size 28x28 pixels.
+
+\subsection{Models and methodology}
+
+We employed two approaches to reconstruct the images from compressed measurements:
+\begin{enumerate}
+    \item \textbf{Variational Auto-encoder (VAE):} This model is designed to generate images similar to those in the training set. The VAE compresses the input image into a lower-dimensional latent space and then reconstructs the image from this representation.
+    \item \textbf{Generative Adversarial Network (GAN):} This model is composed of two competing networks, a generative one and a discriminating one. They are trained to minimize their losses:
+    \begin{itemize}
+        \item The generator tries to generate images from a random latent vector.
+        \item The discriminator tries to discern between real images and generated ones.
+    \end{itemize}
+\end{enumerate}
+For both models, we used a random Gaussian matrix for initial measurements. The compression levels varied from 20 to 770 measurements per image, allowing us to observe the reconstruction quality across different levels of compression.
+
+\subsection{Algorithm explanation}
+
+This section will explain the algorithm utilizing a generative model for compressed sensing.
+\\
+Enhancements include training for 1000 epochs and 10 random restarts to improve convergence and error minimization.
+
+
+
+\subsection{The MNIST Dataset}
+
+The MNIST (Modified National Institute of Standards and Technology) dataset is a large collection of handwritten digits commonly used for training and evaluating image processing systems. It contains 60,000 training images and 10,000 test images, each being a gray scale image of size 28×28 pixels. Each image is labeled with a digit from 0 to 9, providing a diverse set of handwriting styles for developing robust digit recognition systems.
+\begin{itemize}
+    \item \textbf{Size:} 60,000 training images and 10,000 test images.
+    \item \textbf{Resolution:} Each image is 28×28 pixels, resulting in 784 features.
+    \item \textbf{Classes:} 10 classes, representing digits 0 through 9.
+    \item \textbf{Grayscale:} Pixel values range from 0 (black) to 255 (white).
+\end{itemize}
+The MNIST images were vectorized, resulting in 784-dimensional input vectors. Each pixel value was normalized to the range $[0, 1]$.
+
+
+
+\subsection{Results}
+
+The reconstruction performance was evaluated using the mean squared error (MSE) between the original and reconstructed images. The following observations were made:
+
+\begin{enumerate}
+    \item \textbf{VAE Performance:} The VAE achieved lower reconstruction errors with fewer measurements compared to traditional sparse recovery methods such as Lasso. For example, with 50 measurements, the VAE’s performance was comparable to Lasso’s performance with 400 measurements.
+    \item \textbf{GAN Performance:} The performance was slightly better than the VAE architecture. Reconstruction errors decreased as the number of measurements increased, demonstrating the model’s capacity to capture more image details with more data. Exactly like VAE, the performance capped at around 400 measurements, gaining almost no benefit from sampling more.
+\end{enumerate}
+
+\subsection{Conclusion}
+
+The experiment demonstrated the efficacy of using deep learning models, particularly VAEs and GANs, for image reconstruction from compressed measurements. These models significantly reduce reconstruction error compared to traditional sparse recovery methods, especially at lower measurement levels. The findings highlight the potential of integrating compressed sensing techniques with deep learning to enhance image reconstruction quality in resource-constrained environments.
+\\
+These results provide a promising direction for further research, particularly in optimizing measurement matrices and exploring other deep learning architectures for compressed sensing applications.
