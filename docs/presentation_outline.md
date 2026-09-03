@@ -67,7 +67,7 @@ which will matter on slide 12.
 
 | | VAE decoder | DCGAN generator |
 |---|---|---|
-| project | dense to $14^2 	imes 64$ | dense to $3^2 	imes 128$ |
+| project | dense to $14^2 \times 64$ | dense to $3^2 \times 128$ |
 | upsample | one transposed conv | three transposed convs, 128 to 512 filters |
 | parameters ($k=20$) | 282,177 | 2,921,473 |
 
