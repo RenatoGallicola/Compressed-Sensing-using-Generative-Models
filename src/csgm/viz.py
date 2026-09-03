@@ -35,7 +35,14 @@ def show_images(
     """
     images = np.asarray(images).reshape(-1, *IMAGE_SHAPE[:2])
     nrows = int(np.ceil(len(images) / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * scale, nrows * scale * 1.15))
+    # Constrained layout, not tight_layout: titles here are often two lines and
+    # tight_layout lets them collide with the row above.
+    fig, axes = plt.subplots(
+        nrows,
+        ncols,
+        figsize=(ncols * scale, nrows * scale * 1.3),
+        layout="constrained",
+    )
     for i, (ax, img) in enumerate(zip(np.atleast_1d(axes).ravel(), images, strict=False)):
         ax.imshow(img, cmap="gray", vmin=0.0, vmax=1.0)
         if titles is not None:
@@ -47,7 +54,6 @@ def show_images(
         ax.set_yticks([])
     if suptitle:
         fig.suptitle(suptitle, fontsize=12)
-    fig.tight_layout()
     return fig
 
 
