@@ -1,15 +1,18 @@
 \section{Results}
 \vspace{1cm}
-We created two versions of both VAE and DCGAN using different lengths for the latent representation vector \( z \). In one case, we used a latent vector of dimension 20, and in the other, a dimension of 30.
-\\
-Given the trained models, we first visually examined the results of standard sensing at a compressed dimension of 300 (M = 300). All the reconstructions were obtained with 1000 epochs of training and 10 random restarts, selecting the best result.
+We created two versions of both VAE and DCGAN using different lengths for the latent representation vector \( z \). In one case, we used a latent vector of dimension 20, and in the other, a dimension of 30. Together with the LASSO baseline this gives five methods to compare.
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.7\textwidth]{assets/example generation, M= 300 , 1000 epochs adam.png}
-    \caption{Sample image retrieval from 300 measurements using a latent dimension of 20 with a DCGAN model}
-    \label{fig:dcgan retrieval m300}
-\end{figure}
+\subsection{Experimental Protocol}
+
+Every method is evaluated on the same ten test images, one for each digit class, so that the comparison is not driven by a single lucky or unlucky example. At each measurement budget \( M \) the five methods receive the same measurement matrix \( A \) and the same noise vector, and the noise is scaled so that its expected norm remains equal to 0.1 whatever the value of \( M \).
+\\
+The reconstruction quality is measured as the squared distance between the reconstruction and the original image, divided by the number of pixels:
+\begin{equation}
+\text{error per pixel} = \frac{\lVert \hat{x} - x^* \rVert_2^2}{n}, \qquad n = 784 .
+\end{equation}
+This is not the same quantity as the measurement residual \( \lVert AG(\hat{z}) - y \rVert \) that the recovery algorithm minimizes. The residual decreases as \( M \) decreases, simply because fewer constraints have to be satisfied, so it describes how well the optimization converged rather than how good the reconstruction is. For this reason it is used only as a diagnostic, and every number reported below is computed against the ground truth image.
+\\
+All the reconstructions obtained with a generative prior use a thousand gradient steps and ten random restarts, keeping the restart with the smallest measurement residual.
 
 \subsection{Baseline Performance Using LASSO}
 
@@ -18,54 +21,72 @@ We started by evaluating the baseline performance using LASSO for reconstruction
 \hat{x} = \arg \min_x \|y - Ax\|_2^2 + \lambda \|x\|_1,
 \end{equation}
 \\
-where \( y \) is the measurement vector, \( A \) is the measurement matrix, and \( \lambda \) is a regularization parameter. This method aims to find a sparse solution \( x \) that approximates the original signal.
+where \( y \) is the measurement vector, \( A \) is the measurement matrix, and \( \lambda \) is a regularization parameter. We solve it in an orthonormal DCT basis, which is the domain in which MNIST digits are compressible.
 \\
-From our experiments, we observed that the performance of LASSO is inadequate for this task until a substantial number of measurements (high \( M \)) is available. Even then, the reconstructions are often noisy.
-\begin{figure}[h]
+From our experiments, we observed that the performance of LASSO is inadequate for this task until a substantial number of measurements is available. Below 100 measurements the reconstruction is dominated by background noise, and a coherent digit only emerges from about 200 measurements onwards. On the other hand LASSO keeps improving as measurements are added, and it is the most accurate method of all once the budget is large, as discussed below.
+
+\subsection{Comparison of the Five Methods}
+
+Table \ref{tab:results} and figure \ref{fig:error vs measurements} report the error per pixel of every method as the number of measurements grows.
+
+\begin{table}[H]
     \centering
-    \includegraphics[width=0.7\textwidth]{assets/Lasso error per pixel.png}
-    \caption{Error per pixel using LASSO for compressed sensing as a function of the compressed dimension \( M \)}
-    \label{fig:LASSO performance}
-\end{figure}
-\\
-Figure \ref{fig:LASSO reconstructions} illustrates the reconstructed images as the number of measurements \( M \) increases.
-\begin{figure}[hbt!]
-    \centering
-    \includegraphics[width=0.7\textwidth]{assets/lasso reconstructions.png}
-    \caption{Reconstructions as a function of the increasing number of measurements \( M \)}
-    \label{fig:LASSO reconstructions}
-\end{figure}
-\\\\
-We observe that more than 400 measurements are needed for coherent reconstruction that effectively suppresses background noise, although 100 measurements are sufficient to start discerning the digit under the noise. This is achievable because the underlying shape is very simple. For more sophisticated datasets, achieving similar results would be more challenging.
+    \begin{tabular}{r|ccccc}
+    \( M \) & LASSO & VAE \( k{=}20 \) & VAE \( k{=}30 \) & DCGAN \( k{=}20 \) & DCGAN \( k{=}30 \) \\
+    \hline
+    10  & 0.1539 & 0.0696 & 0.0782 & 0.1048 & 0.0798 \\
+    25  & 0.1049 & 0.0401 & \textbf{0.0250} & 0.0623 & 0.0487 \\
+    50  & 0.0850 & 0.0328 & \textbf{0.0153} & 0.0426 & 0.0321 \\
+    75  & 0.0707 & 0.0336 & \textbf{0.0111} & 0.0245 & 0.0315 \\
+    100 & 0.0560 & 0.0287 & 0.0158 & \textbf{0.0144} & 0.0270 \\
+    200 & 0.0366 & 0.0319 & \textbf{0.0071} & 0.0105 & 0.0210 \\
+    300 & 0.0206 & 0.0268 & \textbf{0.0067} & 0.0109 & 0.0219 \\
+    400 & 0.0117 & 0.0311 & \textbf{0.0067} & 0.0099 & 0.0196 \\
+    500 & \textbf{0.0065} & 0.0267 & 0.0068 & 0.0093 & 0.0209 \\
+    750 & \textbf{0.0015} & 0.0265 & 0.0067 & 0.0094 & 0.0189 \\
+    \end{tabular}
+    \caption{Error per pixel, averaged over ten test digits. The best method at each budget is in bold.}
+    \label{tab:results}
+\end{table}
 
-\clearpage
-
-\subsection{Improved Performance Using Generative Networks}
-
-Generative networks, in both VAE and DCGAN forms, significantly enhance performance, requiring far fewer measurements to achieve the same quality of reconstruction as LASSO. The following example, figure \ref{fig:DCGAN generation z = 20}, demonstrates the generation of images with a given number of measurements \( M \).
-\\\\
-We note that the generated number matches the original with as few as 20 measurements.
-\\\\
-This significant improvement showcases the effectiveness of generative networks in compressed sensing, highlighting their ability to reconstruct high-quality images from minimal data.\\
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.7\textwidth]{assets/gan_gen_20/sequential generation through epochs with error.png}
-    \caption{Sample images generated by a DCGAN with a latent vector of dimension 20}
-    \label{fig:DCGAN generation z = 20}
+    \includegraphics[width=1\linewidth]{assets/error_vs_measurements.png}
+    \caption{Error per pixel as a function of the number of measurements \( M \). Bars are standard errors over the ten test images. Both axes are logarithmic.}
+    \label{fig:error vs measurements}
 \end{figure}
-\hfill \break
-Furthermore, we can see how the four models (VAEs with 20 and 30 latent vector dimension and DCGANs with 20 and 30 latent dimension) stack against each other in the error per pixel for every increasing value of M.\\
+
+Three regimes can be distinguished.
+\\\\
+\textbf{Few measurements.} Up to about one hundred measurements the generative priors are far more accurate than LASSO. With 25 measurements the VAE with latent dimension 30 has an error of 0.0250 against 0.1049 for LASSO, that is 4.2 times lower, and at that budget the LASSO reconstruction is not recognizable as a digit at all. This is the regime that motivates compressed sensing, and it is where the choice of the prior matters most.
+\\\\
+\textbf{Sample efficiency.} LASSO needs 400 measurements to reach an error of 0.0117. The VAE with latent dimension 30 reaches the same level with 75 measurements, a saving of a factor 5.3, and the DCGAN with latent dimension 20 with 200 measurements, a factor 2. Bora et al. \cite{bora2017} report a saving between 5 and 10 times for their models, so our best model sits at the lower end of the range they describe.
+\\\\
+\textbf{Many measurements.} From 500 measurements onwards LASSO becomes the most accurate method and keeps improving, reaching 0.0015 with 750 measurements against 0.0067 for the best generative model, a reversal by a factor 4.4. This behaviour is expected and is described in \cite{bora2017}, where the authors observe that LASSO eventually surpasses the generative approach and that this requires more than 500 measurements. Our experiment reproduces that threshold.
+\\\\
+The reason for the reversal is that the reconstruction is constrained to lie in the range of the generator. The distance between a real digit and that range does not depend on the number of measurements, so once enough measurements are available to identify the closest point in the range, additional measurements bring no benefit. Averaging the budgets from 200 upwards, this residual error settles at 0.0068 for the VAE with latent dimension 30, 0.0100 for the DCGAN with latent dimension 20, 0.0204 for the DCGAN with latent dimension 30 and 0.0286 for the VAE with latent dimension 20. These four values are properties of the generators and not of the recovery algorithm.
+
+\subsection{Reconstruction Examples}
+
+Figure \ref{fig:reconstruction grid} shows the same digit reconstructed by every method at every budget.
+
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{assets/losses.png}
-    \caption{Losses per pixel using generative models}
-    \label{fig:generative losses}
+    \includegraphics[width=1\linewidth]{assets/reconstruction_grid.png}
+    \caption{One test digit reconstructed by the five methods as the number of measurements increases}
+    \label{fig:reconstruction grid}
 \end{figure}
-\hfill \break
-To ensure a fair comparison of the models' behavior, we trained them on the same machine for a similar number of epochs.
+
+The visual comparison confirms the numbers. LASSO returns noise until about 200 measurements. The VAE with latent dimension 20 produces a plausible digit almost immediately, but it never sharpens, and even with 750 measurements it returns a shape halfway between a three and a five. The DCGAN with latent dimension 20 gives a sharp digit from 25 measurements onwards, which is consistent with the fact that an adversarial generator is trained to produce samples that a discriminator accepts, rather than an average of the plausible reconstructions as the VAE does.
+
+\subsection{The Latent Dimension}
+
+For the VAE the latent dimension makes a clear difference. The version with \( k = 30 \) is more accurate than the one with \( k = 20 \) at every budget from 50 upwards, and the gap ranges between 2.6 and 4.7 standard errors, so it is not attributable to the choice of the test images. A larger latent space describes the digits more faithfully and therefore lowers the error floor discussed above.
 \\
-From the graph above, we can conclude that all the involved generative networks perform significantly better in terms of loss per pixel with respect to the reconstruction obtained with LASSO, figure \ref{fig:LASSO performance} for reference. Among the four of them, the DCGAN with latent dimension equal to 20 is the one that performs better with few measurements, while as the number of measurements increases we can notice that the models tend to achieve the same performances, settling down on an loss of 0.1 - 0.2 after around 400 measurements.
-\\\\
-DCGAN is a suitable choice for compressed sensing in a scenario in which high precision and few measurements are required.
+For the DCGAN the situation is less clear. The version with \( k = 20 \) is ahead from 75 measurements onwards and the sign of the difference is consistent, but over ten test images the gap never exceeds 1.9 standard errors. We therefore report it as a trend and not as a conclusion, since establishing it would require a larger set of test images.
+
+\subsection{Computational Cost}
+
+The five methods are not comparable in cost. Reconstructing the ten test images at one budget, with ten restarts and a thousand gradient steps, takes on average 1.4 seconds with LASSO, about 20 seconds with a VAE decoder and about 790 seconds with a DCGAN generator. The factor 38 between the two generative priors is explained by the size of the generator, since the DCGAN generator ends with a transposed convolution producing 512 feature maps at full resolution. The complete experiment reported in this section required 4.5 hours of computation.
 \\
-On the other hand, taking into consideration the amount of time needed for training, that in the case of DCGAN is almost 11 times higher than VAE, if the slightly better performance of DCGAN is negligible and it is preferred a less time and resources consuming alternative, than VAE proves to be a valid solution.
+This cost is incurred at every reconstruction and not only once during training, because recovery is itself an optimization problem. In an application where measurements are cheap and reconstructions are frequent, this is on its own a decisive argument in favour of LASSO.

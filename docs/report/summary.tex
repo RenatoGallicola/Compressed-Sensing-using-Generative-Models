@@ -42,15 +42,16 @@ The MNIST images were vectorized, resulting in 784-dimensional input vectors. Ea
 
 \subsection{Results}
 
-The reconstruction performance was evaluated using the mean squared error (MSE) between the original and reconstructed images. The following observations were made:
+The reconstruction performance was evaluated as the squared error between the original and the reconstructed image, divided by the number of pixels, averaged over ten test images, one for each digit class. The following observations were made:
 
 \begin{enumerate}
-    \item \textbf{VAE Performance:} The VAE achieved lower reconstruction errors with fewer measurements compared to traditional sparse recovery methods such as Lasso. For example, with 50 measurements, the VAE’s performance was comparable to Lasso’s performance with 400 measurements.
-    \item \textbf{GAN Performance:} The performance was slightly better than the VAE architecture. Reconstruction errors decreased as the number of measurements increased, demonstrating the model’s capacity to capture more image details with more data. Exactly like VAE, the performance capped at around 400 measurements, gaining almost no benefit from sampling more.
+    \item \textbf{Performance with few measurements:} both models are far more accurate than LASSO when measurements are scarce. The VAE with a latent dimension of 30 obtains with 75 measurements the accuracy that LASSO reaches with 400, and with 25 measurements its error is 4.2 times lower than the LASSO one.
+    \item \textbf{Saturation:} the accuracy of both models stops improving after roughly 200 measurements, because the reconstruction is constrained to the range of the generator. From 500 measurements onwards LASSO becomes the most accurate method.
+    \item \textbf{Comparison between the two models:} the VAE with a latent dimension of 30 is the most accurate of the five methods at seven of the ten budgets tested, and its recovery is about 38 times faster than the DCGAN one.
 \end{enumerate}
 
 \subsection{Conclusion}
 
-The experiment demonstrated the efficacy of using deep learning models, particularly VAEs and GANs, for image reconstruction from compressed measurements. These models significantly reduce reconstruction error compared to traditional sparse recovery methods, especially at lower measurement levels. The findings highlight the potential of integrating compressed sensing techniques with deep learning to enhance image reconstruction quality in resource-constrained environments.
+The experiment demonstrated the efficacy of using deep learning models, particularly VAEs and GANs, for image reconstruction from compressed measurements. These models significantly reduce the reconstruction error compared to traditional sparse recovery methods when the number of measurements is small, while the traditional method remains preferable when measurements are abundant. The findings highlight the potential of integrating compressed sensing techniques with deep learning to enhance image reconstruction quality in resource-constrained environments.
 \\
 These results provide a promising direction for further research, particularly in optimizing measurement matrices and exploring other deep learning architectures for compressed sensing applications.

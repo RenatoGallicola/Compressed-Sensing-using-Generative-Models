@@ -1,30 +1,40 @@
 \section{Conclusions}
 \vspace{1cm}
-This project aimed to assess the performance of compressed sensing using two deep learning models, VAE and GAN, on the MNIST dataset. The models' efficacy in image reconstruction from highly compressed measurements was evaluated and compared to traditional methods like LASSO.
+This project aimed to assess the performance of compressed sensing using two deep learning models, VAE and DCGAN, on the MNIST dataset. The models' efficacy in image reconstruction from highly compressed measurements was evaluated and compared to a traditional method, LASSO with a DCT basis.
 \\\\
 \textbf{Key Findings:}
 
 \begin{enumerate}
-    \item \textbf{Deep Learning Models Enhance Reconstruction:}
+    \item \textbf{Generative priors win when measurements are scarce:}
     \begin{itemize}
-        \item Both VAE and GAN significantly outperformed traditional methods in terms of reconstruction quality with fewer measurements.
-        \item VAEs achieved comparable performance to LASSO with substantially fewer measurements (e.g., 25 vs. 400).
-        \item GANs performed slightly better than VAEs, showing improved reconstruction as the number of measurements increased, though benefits plateaued after around 400 measurements.
+        \item With few measurements both models are far more accurate than LASSO. With 25 measurements the VAE with latent dimension 30 has an error per pixel 4.2 times lower, at a budget where the LASSO reconstruction is not recognizable.
+        \item The VAE with latent dimension 30 reaches with 75 measurements the accuracy that LASSO requires 400 measurements to obtain, a saving of a factor 5.3. This is consistent with the range of 5 to 10 reported in \cite{bora2017}.
     \end{itemize}
-    \item \textbf{Generative Models in Compressed Sensing:}
+    \item \textbf{The advantage has a ceiling:}
     \begin{itemize}
-        \item The success of these models in reconstructing images from minimal data showcases the potential of integrating generative models with compressed sensing techniques.
-        \item The ability of these models to leverage learned data distributions enables high-quality reconstructions even in resource-constrained environments.
+        \item The accuracy of the generative priors stops improving after roughly 200 measurements, because the reconstruction is constrained to the range of the generator and the distance between a real digit and that range does not depend on the number of measurements.
+        \item From 500 measurements onwards LASSO becomes the most accurate method, and with 750 measurements it is 4.4 times more accurate than the best generative model. The same reversal, and the same threshold of about 500 measurements, is described in \cite{bora2017}.
+    \end{itemize}
+    \item \textbf{The VAE outperformed the DCGAN:}
+    \begin{itemize}
+        \item Contrary to what the difference in training cost might suggest, the best model overall is the VAE with latent dimension 30, which is the most accurate of the five methods at seven of the ten budgets we tested.
+        \item The DCGAN produces visually sharper reconstructions, which is expected from an adversarially trained generator, but sharpness and accuracy are not the same thing: a sharp digit of the wrong shape scores worse than a slightly blurred digit of the right one.
+    \end{itemize}
+    \item \textbf{Cost is part of the comparison:}
+    \begin{itemize}
+        \item Recovery with a DCGAN generator is about 38 times slower than with a VAE decoder, and this cost is paid at every reconstruction, since recovery is itself an optimization problem.
+        \item Given that the VAE is also the more accurate of the two, it is the better choice for this dataset on both counts.
     \end{itemize}
 \end{enumerate}
 
 \textbf{Future Directions:}
 
-The promising results suggest several avenues for further research:
+The results suggest several avenues for further research:
 \begin{itemize}
-    \item \textbf{Optimizing Measurement Matrices:} Future work could explore designing or learning measurement matrices tailored to specific datasets and reconstruction tasks.
-    \item \textbf{Exploring Alternative Architectures:} Investigating other deep learning architectures and their applicability to compressed sensing could yield further improvements.
-    \item \textbf{Applications Beyond MNIST:} Applying these methods to more complex and diverse datasets will test the generalizability and robustness of the models.
+    \item \textbf{Reducing the representation error:} the ceiling described above is a property of the generator, so the natural way to improve the method in the high measurement regime is to train a more expressive generative model rather than to refine the recovery algorithm.
+    \item \textbf{Regularizing the latent search:} the objective of \cite{bora2017} includes a term \( \lambda \|z\|^2 \) that keeps the solution in the region where the prior places most of its mass. We used \( \lambda = 0 \), and quantifying the effect of that term is a direct extension of this work.
+    \item \textbf{Optimizing measurement matrices:} designing or learning measurement matrices adapted to a specific dataset, keeping in mind that the theoretical guarantee relies on the randomness of \( A \) and would be traded away.
+    \item \textbf{Applications beyond MNIST:} MNIST digits form a simple and low dimensional manifold. Applying the method to more complex datasets would test whether the advantage in the low measurement regime is preserved.
 \end{itemize}
 \vspace{0.01cm}
-In conclusion, integrating deep learning with compressed sensing provides a powerful approach for efficient data reconstruction. The demonstrated performance improvements open up new possibilities for applications in various fields, such as medical imaging, remote sensing, and beyond. The integration of these techniques can lead to better utilization of limited data, enhancing the capabilities of modern imaging systems.
+In conclusion, combining a generative prior with compressed sensing is worthwhile exactly when measurements are the scarce resource, which is the situation compressed sensing was designed for. The gain is bounded by how well the generator represents the data, and it is paid for with a reconstruction that is orders of magnitude more expensive than a convex solve. Both facts have to be weighed in applications such as medical imaging, where a single measurement can be slow, costly or harmful to the patient, and where the reconstruction happens once.

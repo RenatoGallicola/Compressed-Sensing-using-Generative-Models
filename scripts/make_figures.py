@@ -62,6 +62,7 @@ def error_curves(df: pd.DataFrame, figures_dir: Path) -> Path:
     fig = plot_error_curves(
         curves,
         errorbars=errorbars,
+        logx=True,
         title=f"MNIST recovery from Gaussian measurements (mean of {df['image'].nunique()} images)",
     )
     return save_figure(fig, figures_dir / "error_vs_measurements.png")

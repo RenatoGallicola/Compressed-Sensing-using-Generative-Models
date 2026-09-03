@@ -16,7 +16,15 @@ sparsity prior.
 > Science and Engineering, Politecnico di Milano.
 > The original write-up is in [`docs/NAML_project_report.pdf`](docs/NAML_project_report.pdf).
 
-<!-- RESULTS-HERO -->
+<p align="center">
+  <img src="results/figures/error_vs_measurements.png" width="88%"
+       alt="Reconstruction error against the number of measurements, for Lasso and four generative priors">
+</p>
+
+**A VAE prior recovers an MNIST digit from 75 random measurements about as
+accurately as Lasso does from 400.** Past 500 measurements the ranking reverses,
+because a generative prior can only ever return an image its generator is able
+to produce.
 
 ---
 
@@ -68,7 +76,87 @@ it an approximate isometry in expectation ($\mathbb{E}\lVert Ax \rVert^2 = \lVer
 so errors in measurement space and signal space stay on the same scale as $m$
 changes.
 
-<!-- RESULTS-SECTION -->
+## Results
+
+Ten test digits, one per class, recovered by every method from the same
+measurement matrices and the same noise. Error is the squared distance to the
+ground truth, per pixel; lower is better.
+
+|   m | Lasso (DCT) | VAE k=20 | VAE k=30 | DCGAN k=20 | DCGAN k=30 |
+|----:|------------:|---------:|---------:|-----------:|-----------:|
+|  10 |      0.1539 |   0.0696 |   0.0782 |     0.1048 |     0.0798 |
+|  25 |      0.1049 |   0.0401 |**0.0250**|     0.0623 |     0.0487 |
+|  50 |      0.0850 |   0.0328 |**0.0153**|     0.0426 |     0.0321 |
+|  75 |      0.0707 |   0.0336 |**0.0111**|     0.0245 |     0.0315 |
+| 100 |      0.0560 |   0.0287 |   0.0158 | **0.0144** |     0.0270 |
+| 200 |      0.0366 |   0.0319 |**0.0071**|     0.0105 |     0.0210 |
+| 300 |      0.0206 |   0.0268 |**0.0067**|     0.0109 |     0.0219 |
+| 400 |      0.0117 |   0.0311 |**0.0067**|     0.0099 |     0.0196 |
+| 500 |  **0.0065** |   0.0267 |   0.0068 |     0.0093 |     0.0209 |
+| 750 |  **0.0015** |   0.0265 |   0.0067 |     0.0094 |     0.0189 |
+
+The full table, one row per method, budget and image, is in
+[`results/benchmark.csv`](results/benchmark.csv).
+
+### Three regimes
+
+**Scarce measurements, up to about 100.** The learned priors win by a wide
+margin. At 25 measurements the VAE with `k=30` is 4.2x more accurate than Lasso,
+which at that budget returns pure streak noise. This is the regime compressed
+sensing exists for, and it is where the prior matters most.
+
+**Sample efficiency.** Lasso needs 400 measurements to reach a per-pixel error of
+0.0117. The VAE with `k=30` reaches it with 75, a **5.3x** saving, and the DCGAN
+with `k=20` with 200, a 2x saving. Bora et al. report 5 to 10x for their models,
+so the better of ours lands at the bottom of that range.
+
+**Abundant measurements, past 500.** Lasso overtakes every learned prior and
+keeps improving, reaching 0.0015 at 750 measurements against 0.0067 for the best
+generative model, a 4.4x reversal. Nothing is wrong with the optimisation: the
+generative curves are flat because the reconstruction is confined to the range
+of the generator, and the distance from a real digit to that range does not
+depend on how many measurements are taken.
+
+### The representation error is the ceiling
+
+Averaged over budgets of 200 and above, the error settles at 0.0068 for the VAE
+`k=30`, 0.0100 for the DCGAN `k=20`, 0.0204 for the DCGAN `k=30` and 0.0286 for
+the VAE `k=20`. Those four numbers are properties of the generators, not of the
+recovery algorithm, and they are what a better prior would have to improve.
+
+<p align="center">
+  <img src="results/figures/reconstruction_grid.png" width="95%"
+       alt="One digit reconstructed by every method at every measurement budget">
+</p>
+
+The grid makes the same point visually. Lasso produces noise until roughly 200
+measurements. The VAE `k=20` finds a plausible digit almost immediately but
+never sharpens it, and at high budgets it still returns a shape halfway between
+a 3 and a 5. The DCGAN `k=20` is crisp from 25 measurements on, because an
+adversarial generator is pushed towards sharp samples rather than towards the
+mean of plausible ones.
+
+### The latent dimension
+
+For the VAE, `k=30` is better than `k=20` at every budget from 50 upwards, by 2.6
+to 4.7 standard errors, so the difference is real: the larger latent space
+represents digits more faithfully and lowers the ceiling.
+
+For the DCGAN the picture is different. `k=20` is ahead from 75 upwards, and the
+sign is consistent, but over ten images the gap never exceeds 1.9 standard
+errors. We report it as a trend rather than a result; separating the two would
+need more test images.
+
+### Cost
+
+One reconstruction is not free. Averaged over the sweep, recovering ten images
+with ten restarts and a thousand Adam steps takes 1.4 s with Lasso, about 20 s
+with a VAE decoder and about 790 s with a DCGAN generator, a **38x** gap between
+the two learned priors driven by the size of the generator. The whole sweep took
+4.5 hours of CPU time. Where reconstructions are frequent and measurements are
+cheap, that cost is decisive on its own.
+
+
 
 ## Repository layout
 

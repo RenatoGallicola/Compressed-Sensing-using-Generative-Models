@@ -1,0 +1,11 @@
+# Sample efficiency against Lasso at m = 400
+
+Lasso reaches a per-pixel error of 0.0117 with 400 measurements.
+Each learned prior matches or beats that level with:
+
+| prior | measurements needed | speed-up |
+|---|---|---|
+| VAE, k=20 | never, in the sweep | n/a |
+| VAE, k=30 | 75 | 5.3x |
+| DCGAN, k=20 | 200 | 2.0x |
+| DCGAN, k=30 | never, in the sweep | n/a |

@@ -64,6 +64,7 @@ def plot_error_curves(
     xlabel: str = "number of measurements $m$",
     title: str | None = None,
     logy: bool = True,
+    logx: bool = False,
     errorbars: dict[str, Sequence[float]] | None = None,
 ) -> plt.Figure:
     """Plot one error-vs-measurements curve per method.
@@ -75,6 +76,9 @@ def plot_error_curves(
         title: Optional axes title.
         logy: Use a logarithmic Y axis; errors span more than an order of
             magnitude between the sparse and the learned priors.
+        logx: Use a logarithmic X axis. Budgets are spaced geometrically and the
+            interesting regime is the small one, which a linear axis squeezes
+            into the left edge.
         errorbars: Optional mapping ``label -> half-width`` per point.
 
     Returns:
@@ -88,6 +92,11 @@ def plot_error_curves(
             ax.plot(xs, ys, marker="o", ms=4, label=label)
     if logy:
         ax.set_yscale("log")
+    if logx:
+        ax.set_xscale("log")
+        ax.set_xticks(sorted({x for xs, _ in curves.values() for x in xs}))
+        ax.get_xaxis().set_major_formatter(plt.matplotlib.ticker.ScalarFormatter())
+        ax.tick_params(axis="x", labelsize=8)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
