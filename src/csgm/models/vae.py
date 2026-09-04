@@ -92,15 +92,26 @@ def build_decoder(latent_dim: int, input_shape: tuple[int, int, int] = IMAGE_SHA
 class VAE(keras.Model):
     """VAE trained by maximising the evidence lower bound.
 
-    The loss is ``-ELBO = reconstruction_loss + kl_loss``, with a Bernoulli
-    (binary cross-entropy) likelihood summed over pixels and an analytic KL to
-    the ``N(0, I)`` prior.
+    The loss is ``-ELBO = reconstruction_loss + beta * kl_loss``, with a
+    Bernoulli (binary cross-entropy) likelihood summed over pixels and an
+    analytic KL to the ``N(0, I)`` prior.
+
+    ``beta`` exists to counter posterior collapse, where the encoder gives up on
+    part of the latent space and the decoder learns to ignore it. Holding
+    ``beta`` below one early in training lets the latent code become useful
+    before the regulariser starts pulling it back towards the prior. It is
+    ramped by :class:`KLWarmUp`; with the default of ``1.0`` the loss is the
+    plain ELBO.
+
+    Evaluation always uses ``beta = 1``, so validation losses stay comparable
+    across epochs and across runs with different schedules.
     """
 
     def __init__(self, encoder: keras.Model, decoder: keras.Model, **kwargs) -> None:
         super().__init__(**kwargs)
         self.encoder = encoder
         self.decoder = decoder
+        self.kl_weight = keras.Variable(1.0, trainable=False, name="kl_weight")
         self.total_loss_tracker = keras.metrics.Mean(name="loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(name="reconstruction_loss")
         self.kl_loss_tracker = keras.metrics.Mean(name="kl_loss")
@@ -119,7 +130,7 @@ class VAE(keras.Model):
         _, _, z = self.encoder(inputs, training=training)
         return self.decoder(z, training=training)
 
-    def _compute_losses(self, data: tf.Tensor) -> tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
+    def _compute_losses(self, data: tf.Tensor) -> tuple[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]:
         z_mean, z_log_var, z = self.encoder(data)
         reconstruction = self.decoder(z)
         reconstruction_loss = tf.reduce_mean(
@@ -128,7 +139,9 @@ class VAE(keras.Model):
         kl_loss = tf.reduce_mean(
             tf.reduce_sum(-0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var)), axis=1)
         )
-        return reconstruction_loss + kl_loss, reconstruction_loss, kl_loss
+        objective = reconstruction_loss + self.kl_weight * kl_loss
+        elbo = reconstruction_loss + kl_loss
+        return objective, elbo, reconstruction_loss, kl_loss
 
     def _update_trackers(self, total: tf.Tensor, rec: tf.Tensor, kl: tf.Tensor) -> dict:
         self.total_loss_tracker.update_state(total)
@@ -141,13 +154,35 @@ class VAE(keras.Model):
         if isinstance(data, tuple):
             data = data[0]
         with tf.GradientTape() as tape:
-            total, rec, kl = self._compute_losses(data)
-        grads = tape.gradient(total, self.trainable_weights)
+            objective, elbo, rec, kl = self._compute_losses(data)
+        grads = tape.gradient(objective, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights, strict=True))
-        return self._update_trackers(total, rec, kl)
+        return self._update_trackers(elbo, rec, kl)
 
     def test_step(self, data: tf.Tensor) -> dict:
         """Evaluate ``-ELBO`` without updating the weights."""
         if isinstance(data, tuple):
             data = data[0]
-        return self._update_trackers(*self._compute_losses(data))
+        _, elbo, rec, kl = self._compute_losses(data)
+        return self._update_trackers(elbo, rec, kl)
+
+
+class KLWarmUp(keras.callbacks.Callback):
+    """Ramp the KL weight linearly from ``start`` to one over ``epochs`` epochs.
+
+    Attributes:
+        epochs: Length of the ramp. Zero leaves the weight at one throughout.
+        start: Weight used at the first epoch.
+    """
+
+    def __init__(self, epochs: int, start: float = 0.0) -> None:
+        super().__init__()
+        self.epochs = epochs
+        self.start = start
+
+    def on_epoch_begin(self, epoch: int, logs: dict | None = None) -> None:
+        """Set the weight for the epoch about to run."""
+        if self.epochs <= 0:
+            return
+        progress = min(1.0, epoch / self.epochs)
+        self.model.kl_weight.assign(self.start + (1.0 - self.start) * progress)

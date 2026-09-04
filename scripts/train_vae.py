@@ -26,6 +26,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=1e-3, help="Adam learning rate")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help="global random seed")
     parser.add_argument(
+        "--kl-warmup-epochs",
+        type=int,
+        default=10,
+        help=(
+            "ramp the KL weight from zero to one over this many epochs, which "
+            "counters posterior collapse. 0 trains on the plain ELBO"
+        ),
+    )
+    parser.add_argument(
         "--patience",
         type=int,
         default=10,
@@ -43,7 +52,7 @@ def main() -> None:
 
     import keras
 
-    from csgm.models import VAE, build_decoder, build_encoder
+    from csgm.models import VAE, KLWarmUp, build_decoder, build_encoder
 
     keras.utils.set_random_seed(args.seed)
 
@@ -58,7 +67,7 @@ def main() -> None:
     vae = VAE(encoder, decoder)
     vae.compile(optimizer=keras.optimizers.Adam(learning_rate=args.learning_rate))
 
-    callbacks = []
+    callbacks = [KLWarmUp(args.kl_warmup_epochs)]
     if args.patience:
         callbacks.append(
             keras.callbacks.EarlyStopping(
