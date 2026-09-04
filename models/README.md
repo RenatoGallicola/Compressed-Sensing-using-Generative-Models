@@ -6,12 +6,20 @@ are kept so the adversarial training can be resumed or audited.
 
 | file | role | latent dim | trained by |
 |---|---|---|---|
-| `vae_decoder_dim20.keras` | generator $G$ | 20 | `scripts/train_vae.py --latent-dim 20 --epochs 100` |
-| `vae_decoder_dim30.keras` | generator $G$ | 30 | `scripts/train_vae.py --latent-dim 30 --epochs 100` |
-| `gan_gen_dim20.keras` | generator $G$ | 20 | `scripts/train_dcgan.py --latent-dim 20 --epochs 50` |
-| `gan_gen_dim30.keras` | generator $G$ | 30 | `scripts/train_dcgan.py --latent-dim 30 --epochs 50` |
-| `gan_disc_dim20.keras` | discriminator $D$ | n/a | as above |
-| `gan_disc_dim30.keras` | discriminator $D$ | n/a | as above |
+| `vae_decoder_dim20.keras` | generator $G$ | 20 | `train_vae.py --latent-dim 20 --seed 1` |
+| `vae_decoder_dim30.keras` | generator $G$ | 30 | `train_vae.py --latent-dim 30 --seed 1` |
+| `fc_vae_decoder_dim20.keras` | generator $G$ | 20 | `train_vae.py --latent-dim 20 --architecture fc` |
+| `gan_gen_dim20.keras` | generator $G$ | 20 | `train_dcgan.py --latent-dim 20 --epochs 50` |
+| `gan_gen_dim30.keras` | generator $G$ | 30 | `train_dcgan.py --latent-dim 30 --epochs 50` |
+| `vae_encoder_dim*.keras`, `fc_vae_encoder_dim20.keras` | encoder $q_\phi(z \mid x)$ | as above | saved with the decoder |
+| `gan_disc_dim20.keras`, `gan_disc_dim30.keras` | discriminator $D$ | n/a | saved with the generator |
+
+The `fc_` files are the fully connected `784-500-500-20` architecture of Bora et
+al., kept so that the reference setup can be reproduced rather than
+approximated. The others are the convolutional networks described in the report.
+
+Which seed each VAE checkpoint comes from, and why, is recorded in
+[`docs/model_selection.md`](../docs/model_selection.md).
 
 All four generators map $z \in \mathbb{R}^k$ to a $28 \times 28 \times 1$ image
 with sigmoid outputs in $[0, 1]$, and were trained on MNIST scaled to the same

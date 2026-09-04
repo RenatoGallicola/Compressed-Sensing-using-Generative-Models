@@ -10,7 +10,11 @@ The objective function to be minimized is:\\
 \begin{equation}
 \text{loss}(z) = \| AG(z) - y \|^2.
 \end{equation}
-Bora et al. \cite{bora2017} also consider a regularized version of this objective, obtained by adding a term \( \lambda \|z\|^2 \) that keeps the solution inside the region where the prior \( P_Z \) places most of its mass. In our experiments we set \( \lambda = 0 \), so that the reconstruction depends on the generator alone.
+The objective actually used in \cite{bora2017} adds a regularization term to this expression:
+\begin{equation}
+\text{loss}(z) = \| AG(z) - y \|^2 + \lambda \|z\|^2 .
+\end{equation}
+Since both the VAE and the DCGAN impose an isotropic Gaussian prior on \( z \), the quantity \( \|z\|^2 \) is proportional to the negative log-likelihood of the latent vector under that prior, so the term keeps the search inside the region the generator was trained to cover. The authors report \( \lambda = 0.1 \) as the best value on MNIST and we adopt it, applying it to every generative prior for consistency. Results obtained with \( \lambda = 0 \) are reported alongside, as the reference paper does.
 \\
 Optimization is performed using gradient descent on \( z \) with the Adam algorithm \cite{kingma2015adam} for optimizing descent. If \( G \) is differentiable, gradients of the loss with respect to \( z \) can be computed using back-propagation. The process involves iteratively updating \( z \) to minimize the measurement error. Upon convergence to \( \hat{z} \), the reconstruction of \( x^* \) is given by \( G(\hat{z}) \).
 \\\\
@@ -26,5 +30,5 @@ This method leverages the data prior encoded in the generative model to achieve 
 \\\\
 A theoretical justification is given in \cite{bora2017}. If \( G \) is \( L \)-Lipschitz, a number of random Gaussian measurements of the order of \( k \log L \) is sufficient to guarantee that the reconstruction error is close to the smallest error achievable by any vector in the range of \( G \). The number of measurements required therefore scales with the latent dimension \( k \) and not with the ambient dimension \( n \), which is the reason why so few measurements are enough.
 \\
-In order to improve convergence we performed a thousand gradient steps for each of ten random restarts, and we kept the attempt that presented the smallest measurement error at the end of the approximation. These steps are not training epochs: the weights of \( G \) are frozen and the only variable that gets updated is the latent vector \( z \).
+In order to improve convergence we performed a thousand gradient steps for each of ten random restarts, and we kept the attempt that presented the smallest measurement error \( \| AG(z) - y \| \) at the end of the approximation. Note that the regularization term is excluded from this comparison: ranking the restarts on the full objective would reward a small \( \|z\| \) rather than a faithful reconstruction. The measurement error is also the only criterion available in practice, since it can be computed without knowing \( x^* \). These steps are not training epochs: the weights of \( G \) are frozen and the only variable that gets updated is the latent vector \( z \).
 

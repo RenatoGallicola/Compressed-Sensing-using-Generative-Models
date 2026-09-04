@@ -7,7 +7,10 @@
 | file | contents |
 |---|---|
 | `benchmark.csv` | long format, one row per (method, $m$, image): per-pixel error, PSNR, measurement residual, wall-clock time |
+| `benchmark_meta.json` | the protocol the table was produced with, checked before any `--merge` |
 | `reconstructions.npz` | every reconstruction, keyed `<method>__m<budget>`, plus `ground_truth` |
+| `unregularised/` | the same sweep with $\lambda = 0$, for the comparison the reference paper draws |
+| `lambda_sweep.csv` | `run_lambda_sweep.py` output: error and latent norm for several values of $\lambda$ |
 
 `python scripts/make_figures.py` then turns that table into:
 
@@ -17,6 +20,7 @@
 | `figures/reconstruction_grid.png` | one digit reconstructed by every method at every budget |
 | `figures/prior_samples.png` | unconditional samples from each generator |
 | `figures/metric_comparison.png` | reconstruction error and optimisation residual for the same runs |
+| `figures/lambda_sweep.png` | effect of the latent regulariser on error and on the latent norm |
 | `summary.md`, `summary.csv` | mean per-pixel error per method and budget |
 | `sample_efficiency.md` | measurements each prior needs to match Lasso at m = 400 |
 

@@ -180,6 +180,7 @@ cheap, that cost is decisive on its own.
 │   ├── train_vae.py             train the VAE, save the decoder
 │   ├── train_dcgan.py           train the DCGAN, save the generator
 │   ├── run_benchmark.py         the full sweep -> results/benchmark.csv
+│   ├── run_lambda_sweep.py      sensitivity to the latent regulariser
 │   └── make_figures.py          csv -> figures and summary tables
 ├── notebooks/                 narrated walkthrough (01 VAE, 02 DCGAN, 03 Lasso, 04 recovery)
 ├── models/                    pre-trained checkpoints (k = 20 and k = 30)
@@ -187,6 +188,8 @@ cheap, that cost is decisive on its own.
 ├── docs/
 │   ├── report/                  LaTeX source of the report
 │   ├── figures/                 figures used in the docs
+│   ├── model_selection.md       how the VAE checkpoints were chosen
+│   ├── presentation_outline.md  slide-by-slide outline of the talk
 │   └── NAML_project_report.pdf  the compiled report
 └── tests/                     pytest suite covering the package
 ```
@@ -226,13 +229,17 @@ print(f"per-pixel error: {per_pixel_l2(result.x_hat, x_star)[0]:.4f}")
 
 ```bash
 # 1. (optional) retrain the priors -- pre-trained checkpoints ship in models/
-python scripts/train_vae.py   --latent-dim 20 --epochs 100
+python scripts/train_vae.py   --latent-dim 20 --seed 1          # convolutional
+python scripts/train_vae.py   --latent-dim 20 --architecture fc # paper's network
 python scripts/train_dcgan.py --latent-dim 20 --epochs 50
 
-# 2. sweep every prior over every measurement budget  (~3 h on CPU)
-python scripts/run_benchmark.py --n-images 10 --steps 1000 --restarts 10
+# 2. sweep every prior over every measurement budget  (~5 h on CPU)
+python scripts/run_benchmark.py --n-images 10 --steps 1000 --restarts 10 --l2-penalty 0.1
 
-# 3. turn the raw table into figures and summary tables
+# 3. how much the latent regulariser matters (VAE decoders only, ~30 min)
+python scripts/run_lambda_sweep.py
+
+# 4. turn the raw tables into figures and summary tables
 python scripts/make_figures.py
 ```
 
@@ -240,6 +247,11 @@ python scripts/make_figures.py
 (method, $m$, image), so the analysis can be redone without re-running the sweep.
 Every random draw (measurement matrices, noise, latent initialisations and the
 choice of test images) is derived from a single `--seed`.
+
+It also writes `benchmark_meta.json` recording the protocol. Passing `--merge`
+re-runs a subset of the methods and folds them into an existing table, which
+refuses to proceed unless the recorded protocol matches, so results from two
+runs cannot be pooled unless they are comparable.
 
 The notebooks are committed **with their outputs**, so every plot is readable
 straight from GitHub without installing anything. They were executed top to
@@ -265,6 +277,21 @@ and never as a score.
 **Latent codes are initialised from $\mathcal{N}(0, I)$**, the prior the
 generators were trained under. Starting much closer to the origin biases the
 search towards the blurry centre of the latent space.
+
+**The latent regulariser uses $\lambda = 0.1$**, the value Bora et al. report as
+best on MNIST. `results/unregularised/` holds the same sweep with $\lambda = 0$,
+so both variants can be compared as they are in the reference paper.
+
+**Restarts are ranked on the measurement error alone**, never on the penalised
+objective. Ranking on the objective would reward a small $\lVert z \rVert$
+rather than a faithful reconstruction, and the measurement error is the only
+criterion available when the ground truth is unknown.
+
+**The VAEs are trained with a KL warm-up.** The weight of the KL term is ramped
+from zero to one over the first ten epochs. Without it, training frequently ends
+in partial posterior collapse and the quality of the resulting prior varies by a
+factor of three between random seeds; see
+[`docs/model_selection.md`](docs/model_selection.md).
 
 **Every method sees the same inputs.** At each budget the same measurement
 matrix, the same noise draw and the same ten stratified test digits, one per

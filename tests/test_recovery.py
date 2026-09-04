@@ -92,3 +92,28 @@ def test_dimension_mismatch_raises(linear_generator):
     A = gaussian_measurement_matrix(20, N_PIXELS, seed=7)
     with pytest.raises(ValueError, match="19 measurements"):
         recover(linear_generator, np.zeros((1, 19), dtype="float32"), A, LATENT_DIM, FAST)
+
+
+def test_residual_excludes_the_latent_penalty(linear_generator, rng):
+    """The reported residual must be the measurement error alone.
+
+    Restarts are ranked on it, and with a penalty in the objective a residual
+    that included the penalty would favour small latent codes over faithful
+    reconstructions.
+    """
+    x, _ = _range_signal(linear_generator, rng, batch=2)
+    A = gaussian_measurement_matrix(50, N_PIXELS, seed=11)
+    y = measure(x, A)
+
+    result = recover(
+        linear_generator,
+        y,
+        A,
+        LATENT_DIM,
+        RecoveryConfig(steps=200, restarts=2, l2_penalty=5.0, image_batch_size=2),
+    )
+    measured = np.linalg.norm(result.x_hat @ A.T - y, axis=1)
+    np.testing.assert_allclose(result.residual, measured, rtol=1e-3, atol=1e-4)
+    # With a penalty that large the full objective is clearly bigger, so the two
+    # quantities really are distinguishable here.
+    assert (result.residual**2 + 5.0 * np.sum(result.z**2, axis=1) > result.residual**2).all()

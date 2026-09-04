@@ -193,8 +193,11 @@ def recover(
         z_np = np.asarray(z)[np.arange(b) * r + winners]
 
         z_best[start:stop] = z_np
-        x_hat[start:stop] = np.asarray(generator(z_np, training=False)).reshape(b, n)
-        residual[start:stop] = np.sqrt(losses[np.arange(b), winners])
+        reconstructions = np.asarray(generator(z_np, training=False)).reshape(b, n)
+        x_hat[start:stop] = reconstructions
+        # Measured on the reconstruction being returned, rather than reusing the
+        # value from inside the loop, which predates the final Adam update.
+        residual[start:stop] = np.linalg.norm(reconstructions @ A.T - y[start:stop], axis=1)
 
     return RecoveryResult(
         x_hat=x_hat,

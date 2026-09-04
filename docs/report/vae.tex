@@ -66,9 +66,19 @@ L(\theta,\phi;x)=\mathbb{E}_{q_{\phi}(z\vert x)}[log\ p_\theta(x\vert z)]-KL(q_\
 \end{equation}
 The VAE is trained with a custom loop, consisting of three main steps: \textbf{forward pass}, \textbf{loss calculation} and \textbf{backward pass}. During the forward pass, the input data is passed through the encoder to get the mean and log variance of the latent distribution, then the latent vector z is sampled using the reparamentrization trick, and finally z is passed through the decoder to get the reconstructed data. The loss calculation step computes the reconstruction loss between the input data and the reconstructed data, the KL divergence, and then sums them up to compute the total loss. Finally, in the backward pass the total loss is backpropagated to update the parameters of the encoder and decoder.
 \\\\
-The model is trained for up to 100 epochs using a batch size of 100 and an Adam optimizer \cite{kingma2015adam} with learning rate of 0.001, with early stopping monitoring the loss.
+The model is trained for up to 100 epochs using a batch size of 100 and an Adam optimizer \cite{kingma2015adam} with learning rate of 0.001, with early stopping monitoring the validation loss.
+\\\\
+\textbf{KL warm-up.} Training the model as described above turned out to be unreliable: repeating it with different random seeds produced generators of very different quality, and the weaker runs showed \textbf{partial posterior collapse}, a known failure mode in which the encoder stops using part of the latent space and the decoder learns to ignore it. To counter it we scale the KL term by a coefficient that grows linearly from 0 to 1 over the first ten epochs. Early in training the latent code can become informative without being pulled back towards the prior, and the regularization reaches full strength only afterwards. The evaluation always uses a coefficient of 1, so validation losses remain comparable across epochs and across runs.
+\\
+The effect is substantial. Without warm-up the average KL divergence at convergence was between 4 and 7 nats and the quality of the resulting prior varied by a factor of three across seeds; with warm-up it is between 16 and 23 nats and the spread across seeds falls to about 20\%. The procedure used to choose between runs is described in \texttt{docs/model\_selection.md} in the repository.
 \\\\
 To test the goodness of the model in the context of compress sensing, two versions of the VAE have been generated: one with the dimension of the latent vector equal to 20, and the other equal to 30. After using both of them, it’s possible to conclude that they lead to good results, as shown in the Results section.
+\subsubsection{The architecture of the reference paper}
+
+The convolutional networks described above are our own design. The experiments of Bora et al. \cite{bora2017} on MNIST instead use a \textbf{fully connected} auto-encoder, with a recognition network of shape \( 784-500-500-k \) and a generator of shape \( k-500-500-784 \), a latent dimension of 20, and the same optimizer, batch size and learning rate we use. Since our generator differs from theirs, a difference between our results and the numbers they publish could be attributed either to the method or to the model.
+\\
+To separate the two, we also trained their architecture, and we report it as a separate prior in the Results section. The paper specifies the layer widths but not the activation function; we use softplus, following the original variational auto-encoder \cite{kingma2014} the architecture is taken from.
+
 \subsection{Model results}
 The following graph shows the output mean vector produced by the encoder with the test set provided by the MNIST dataset. For the sake of simplicity, this result is obtained with a latent dimension equal to 2.
 \begin{figure}[H]

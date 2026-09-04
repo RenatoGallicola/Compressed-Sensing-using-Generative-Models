@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import keras
 import numpy as np
 import pytest
 
@@ -97,3 +98,31 @@ def test_shipped_checkpoints_load_and_generate(model, latent_dim):
     images = np.asarray(generator(np.zeros((1, latent_dim), dtype="float32")))
     assert images.reshape(1, -1).shape[1] == int(np.prod(IMAGE_SHAPE))
     assert not generator.trainable
+
+
+def test_paper_architecture_matches_the_published_layer_widths():
+    """Bora et al. specify 784-500-500-k and k-500-500-784, fully connected."""
+    from csgm.models import build_fc_decoder, build_fc_encoder
+
+    encoder, decoder = build_fc_encoder(20), build_fc_decoder(20)
+    widths = [
+        layer.output.shape[-1] for layer in decoder.layers if isinstance(layer, keras.layers.Dense)
+    ]
+    assert widths == [500, 500, 784]
+    assert [t.shape[-1] for t in encoder(np.zeros((2, *IMAGE_SHAPE), "float32"))] == [20, 20, 20]
+    assert not any("conv" in type(layer).__name__.lower() for layer in decoder.layers)
+
+
+def test_paper_decoder_produces_images_in_the_unit_interval():
+    from csgm.models import build_fc_decoder
+
+    images = np.asarray(build_fc_decoder(20)(np.zeros((3, 20), "float32")))
+    assert images.shape == (3, *IMAGE_SHAPE)
+    assert 0.0 <= images.min() and images.max() <= 1.0
+
+
+def test_paper_architecture_has_its_own_checkpoint_name():
+    conv = checkpoint_path("vae", 20).name
+    paper = checkpoint_path("fcvae", 20).name
+    assert conv != paper
+    assert "fc" in paper
