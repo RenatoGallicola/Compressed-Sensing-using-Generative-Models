@@ -21,6 +21,15 @@ def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--latent-dim", type=int, default=20, help="latent dimensionality k")
+    parser.add_argument(
+        "--architecture",
+        choices=("conv", "fc"),
+        default="conv",
+        help=(
+            "conv is the convolutional network described in the report; fc is the "
+            "fully connected 784-500-500-k network of the reference paper"
+        ),
+    )
     parser.add_argument("--epochs", type=int, default=100, help="training epochs")
     parser.add_argument("--batch-size", type=int, default=100, help="mini-batch size")
     parser.add_argument("--learning-rate", type=float, default=1e-3, help="Adam learning rate")
@@ -52,15 +61,26 @@ def main() -> None:
 
     import keras
 
-    from csgm.models import VAE, KLWarmUp, build_decoder, build_encoder
+    from csgm.models import (
+        VAE,
+        KLWarmUp,
+        build_decoder,
+        build_encoder,
+        build_fc_decoder,
+        build_fc_encoder,
+    )
 
     keras.utils.set_random_seed(args.seed)
 
     (x_train, _), (x_test, _) = load_mnist()
     print(f"train {x_train.shape} | test {x_test.shape}")
 
-    encoder = build_encoder(args.latent_dim)
-    decoder = build_decoder(args.latent_dim)
+    if args.architecture == "fc":
+        encoder = build_fc_encoder(args.latent_dim)
+        decoder = build_fc_decoder(args.latent_dim)
+    else:
+        encoder = build_encoder(args.latent_dim)
+        decoder = build_decoder(args.latent_dim)
     encoder.summary()
     decoder.summary()
 
@@ -84,8 +104,9 @@ def main() -> None:
     )
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    decoder_path = args.output_dir / f"vae_decoder_dim{args.latent_dim}.keras"
-    encoder_path = args.output_dir / f"vae_encoder_dim{args.latent_dim}.keras"
+    prefix = "fc_vae" if args.architecture == "fc" else "vae"
+    decoder_path = args.output_dir / f"{prefix}_decoder_dim{args.latent_dim}.keras"
+    encoder_path = args.output_dir / f"{prefix}_encoder_dim{args.latent_dim}.keras"
     decoder.save(decoder_path)
     encoder.save(encoder_path)
     print(f"saved {decoder_path}\nsaved {encoder_path}")

@@ -2,7 +2,15 @@
 
 from csgm.models.dcgan import DCGAN, GANMonitor, build_discriminator, build_generator
 from csgm.models.loading import load_generator
-from csgm.models.vae import VAE, KLWarmUp, Sampling, build_decoder, build_encoder
+from csgm.models.vae import (
+    VAE,
+    KLWarmUp,
+    Sampling,
+    build_decoder,
+    build_encoder,
+    build_fc_decoder,
+    build_fc_encoder,
+)
 
 __all__ = [
     "DCGAN",
@@ -13,6 +21,8 @@ __all__ = [
     "build_decoder",
     "build_discriminator",
     "build_encoder",
+    "build_fc_decoder",
+    "build_fc_encoder",
     "build_generator",
     "load_generator",
 ]

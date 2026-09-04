@@ -9,6 +9,7 @@ decoder is needed at recovery time -- it *is* the generator ``G``.
 from __future__ import annotations
 
 import keras
+import numpy as np
 import tensorflow as tf
 from keras import layers
 
@@ -61,6 +62,61 @@ def build_encoder(latent_dim: int, input_shape: tuple[int, int, int] = IMAGE_SHA
     z_log_var = layers.Dense(latent_dim, name="z_log_var")(x)
     z = Sampling(name="z")([z_mean, z_log_var])
     return keras.Model(inputs, [z_mean, z_log_var, z], name="encoder")
+
+
+def build_fc_encoder(
+    latent_dim: int, input_shape: tuple[int, int, int] = IMAGE_SHAPE, hidden: int = 500
+) -> keras.Model:
+    """Build the recognition network used by Bora et al. (2017), section 5.1.
+
+    A fully connected ``784-500-500-k`` network, with no convolutions. It is
+    kept alongside the convolutional encoder so that the reference setup can be
+    reproduced rather than approximated.
+
+    The paper gives the layer widths but not the activation. We use softplus,
+    following the original variational auto-encoder of Kingma and Welling that
+    the architecture is taken from.
+
+    Args:
+        latent_dim: Dimensionality ``k`` of the latent space.
+        input_shape: Shape of a single input image.
+        hidden: Width of the two hidden layers.
+
+    Returns:
+        A model mapping an image to ``[z_mean, z_log_var, z]``.
+    """
+    inputs = keras.Input(shape=input_shape, name="encoder_input")
+    x = layers.Flatten()(inputs)
+    x = layers.Dense(hidden, activation="softplus")(x)
+    x = layers.Dense(hidden, activation="softplus")(x)
+
+    z_mean = layers.Dense(latent_dim, name="z_mean")(x)
+    z_log_var = layers.Dense(latent_dim, name="z_log_var")(x)
+    z = Sampling(name="z")([z_mean, z_log_var])
+    return keras.Model(inputs, [z_mean, z_log_var, z], name="fc_encoder")
+
+
+def build_fc_decoder(
+    latent_dim: int, input_shape: tuple[int, int, int] = IMAGE_SHAPE, hidden: int = 500
+) -> keras.Model:
+    """Build the generator used by Bora et al. (2017), section 5.1.
+
+    A fully connected ``k-500-500-784`` network ending in a sigmoid.
+
+    Args:
+        latent_dim: Dimensionality ``k`` of the latent space.
+        input_shape: Shape of the image to reconstruct.
+        hidden: Width of the two hidden layers.
+
+    Returns:
+        A model mapping ``(batch, latent_dim)`` to ``(batch, *input_shape)``.
+    """
+    inputs = keras.Input(shape=(latent_dim,), name="decoder_input")
+    x = layers.Dense(hidden, activation="softplus")(inputs)
+    x = layers.Dense(hidden, activation="softplus")(x)
+    x = layers.Dense(int(np.prod(input_shape)), activation="sigmoid")(x)
+    outputs = layers.Reshape(input_shape, name="decoder_output")(x)
+    return keras.Model(inputs, outputs, name="fc_decoder")
 
 
 def build_decoder(latent_dim: int, input_shape: tuple[int, int, int] = IMAGE_SHAPE) -> keras.Model:

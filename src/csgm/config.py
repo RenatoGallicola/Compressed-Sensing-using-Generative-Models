@@ -33,7 +33,8 @@ def checkpoint_path(model: str, latent_dim: int) -> Path:
     """Return the path of a shipped checkpoint.
 
     Args:
-        model: ``"vae"`` or ``"dcgan"``.
+        model: ``"vae"``, ``"fcvae"`` (the fully connected architecture of
+            the reference paper) or ``"dcgan"``.
         latent_dim: Latent dimensionality (see :data:`LATENT_DIMS`).
 
     Returns:
@@ -42,7 +43,11 @@ def checkpoint_path(model: str, latent_dim: int) -> Path:
     Raises:
         ValueError: If ``model`` is not a known model name.
     """
-    names = {"vae": "vae_decoder_dim{k}.keras", "dcgan": "gan_gen_dim{k}.keras"}
+    names = {
+        "vae": "vae_decoder_dim{k}.keras",
+        "fcvae": "fc_vae_decoder_dim{k}.keras",
+        "dcgan": "gan_gen_dim{k}.keras",
+    }
     if model not in names:
         raise ValueError(f"unknown model {model!r}, expected one of {sorted(names)}")
     return MODELS_DIR / names[model].format(k=latent_dim)

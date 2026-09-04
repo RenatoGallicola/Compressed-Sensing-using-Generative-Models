@@ -20,6 +20,7 @@ from csgm.viz import plot_error_curves, save_figure
 
 LABELS = {
     "lasso": "Lasso (DCT basis)",
+    "fcvae-20": "VAE, paper architecture, k=20",
     "vae-20": "VAE, k=20",
     "vae-30": "VAE, k=30",
     "dcgan-20": "DCGAN, k=20",

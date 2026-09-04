@@ -15,7 +15,8 @@ def load_generator(model: str, latent_dim: int, *, path: str | Path | None = Non
     update from silently modifying the prior.
 
     Args:
-        model: ``"vae"`` (loads the decoder) or ``"dcgan"`` (loads the generator).
+        model: ``"vae"`` or ``"fcvae"`` (loads the decoder) or ``"dcgan"``
+            (loads the generator).
         latent_dim: Latent dimensionality of the checkpoint.
         path: Explicit checkpoint path, overriding the ``models/`` lookup.
 
@@ -29,9 +30,11 @@ def load_generator(model: str, latent_dim: int, *, path: str | Path | None = Non
 
     checkpoint = Path(path) if path is not None else checkpoint_path(model, latent_dim)
     if not checkpoint.exists():
+        script = "train_vae.py" if "vae" in model else "train_dcgan.py"
+        architecture = " --architecture fc" if model == "fcvae" else ""
         raise FileNotFoundError(
             f"checkpoint {checkpoint} not found -- train one with "
-            f"'python scripts/train_{model}.py --latent-dim {latent_dim}'"
+            f"'python scripts/{script} --latent-dim {latent_dim}{architecture}'"
         )
 
     generator = keras.models.load_model(checkpoint, compile=False)

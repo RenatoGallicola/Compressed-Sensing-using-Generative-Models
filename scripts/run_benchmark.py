@@ -113,7 +113,7 @@ def parse_method(method: str) -> tuple[str, int | None]:
     """Split a method string into ``(family, latent_dim)``.
 
     Args:
-        method: ``"lasso"`` or e.g. ``"dcgan-20"``.
+        method: ``"lasso"`` or e.g. ``"dcgan-20"``, ``"fcvae-20"``.
 
     Returns:
         ``("lasso", None)`` or ``("dcgan", 20)``.
@@ -124,7 +124,7 @@ def parse_method(method: str) -> tuple[str, int | None]:
     if method == "lasso":
         return "lasso", None
     family, _, dim = method.partition("-")
-    if family not in {"vae", "dcgan"} or not dim.isdigit():
+    if family not in {"vae", "fcvae", "dcgan"} or not dim.isdigit():
         raise ValueError(f"unrecognised method {method!r}")
     return family, int(dim)
 

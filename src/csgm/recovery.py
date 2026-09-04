@@ -63,10 +63,9 @@ class RecoveryResult:
         x_hat: Reconstructions, shape ``(batch, n)``.
         z: Winning latent codes, shape ``(batch, k)``.
         residual: Measurement residual ``||A G(z) - y||_2`` per image, shape
-            ``(batch,)`` -- the square root of the minimised objective, so with
-            a non-zero ``l2_penalty`` it also carries the penalty term. Either
-            way it is an optimisation diagnostic: judge quality with
-            :mod:`csgm.metrics` against the ground truth.
+            ``(batch,)``, excluding any latent penalty. It is the quantity the
+            restarts are ranked on, and an optimisation diagnostic: judge
+            quality with :mod:`csgm.metrics` against the ground truth.
         history: Mean objective across the stacked batch at every step, shape
             ``(steps,)``. Empty unless ``track_history=True``.
     """
@@ -91,7 +90,9 @@ def _optimise(generator, z, y_rep, A_t, config: RecoveryConfig, n: int, history:
         history: If not ``None``, the mean objective is appended at every step.
 
     Returns:
-        Final per-item objective as a NumPy array of shape ``(items,)``.
+        Two arrays of shape ``(items,)``: the squared measurement error, and the
+        full objective that was minimised. They differ only when
+        ``l2_penalty`` is non-zero.
     """
     import tensorflow as tf
 
@@ -99,24 +100,25 @@ def _optimise(generator, z, y_rep, A_t, config: RecoveryConfig, n: int, history:
     optimizer = tf.keras.optimizers.Adam(learning_rate=config.learning_rate)
 
     @tf.function(reduce_retracing=True)
-    def step() -> tf.Tensor:
+    def step() -> tuple[tf.Tensor, tf.Tensor]:
         with tf.GradientTape() as tape:
             generated = tf.reshape(generator(z, training=False), (items, n))
-            per_item = tf.reduce_sum((generated @ A_t - y_rep) ** 2, axis=1)
+            measurement = tf.reduce_sum((generated @ A_t - y_rep) ** 2, axis=1)
+            objective = measurement
             if config.l2_penalty:
-                per_item += config.l2_penalty * tf.reduce_sum(z**2, axis=1)
-            total = tf.reduce_sum(per_item)
+                objective = measurement + config.l2_penalty * tf.reduce_sum(z**2, axis=1)
+            total = tf.reduce_sum(objective)
         optimizer.apply_gradients([(tape.gradient(total, z), z)])
-        return per_item
+        return measurement, objective
 
-    per_item = None
+    measurement = objective = None
     for i in range(config.steps):
-        per_item = step()
+        measurement, objective = step()
         if history is not None:
-            history.append(float(tf.reduce_mean(per_item)))
+            history.append(float(tf.reduce_mean(objective)))
         if config.log_every and i % config.log_every == 0:
-            print(f"  step {i:>5} | mean objective {float(tf.reduce_mean(per_item)):.5f}")
-    return np.asarray(per_item)
+            print(f"  step {i:>5} | mean objective {float(tf.reduce_mean(objective)):.5f}")
+    return np.asarray(measurement), np.asarray(objective)
 
 
 def recover(
@@ -177,11 +179,16 @@ def recover(
         )
         y_rep = tf.constant(np.repeat(y[start:stop], r, axis=0))
 
-        losses = _optimise(
+        measurement, _ = _optimise(
             generator, z, y_rep, A_t, config, n, history if track_history else None
-        ).reshape(b, r)
+        )
+        losses = measurement.reshape(b, r)
 
-        # Keep, for each image, the restart with the smallest measurement residual.
+        # Keep, for each image, the restart with the smallest measurement error.
+        # Bora et al. select this way, and it is the only choice that stays
+        # available when the ground truth is unknown. With a non-zero penalty the
+        # full objective would also reward a small ||z||, which is not what the
+        # reconstruction is judged on.
         winners = losses.argmin(axis=1)
         z_np = np.asarray(z)[np.arange(b) * r + winners]
 
