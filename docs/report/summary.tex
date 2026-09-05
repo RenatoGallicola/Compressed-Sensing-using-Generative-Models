@@ -25,7 +25,7 @@ For all the models, we used a random Gaussian matrix for the measurements. The c
 
 This section will explain the algorithm utilizing a generative model for compressed sensing.
 \\
-Enhancements include training for 1000 epochs and 10 random restarts to improve convergence and error minimization.
+Enhancements include a thousand gradient steps on the latent vector and 10 random restarts to improve convergence and error minimization.
 
 
 
@@ -47,9 +47,9 @@ The MNIST images were vectorized, resulting in 784-dimensional input vectors. Ea
 The reconstruction performance was evaluated as the squared error between the original and the reconstructed image, divided by the number of pixels, averaged over ten test images, one for each digit class. The following observations were made:
 
 \begin{enumerate}
-    \item \textbf{Performance with few measurements:} every generative prior is far more accurate than LASSO when measurements are scarce. The architecture of the reference paper reaches with 50 measurements the accuracy LASSO obtains with 400, a saving of a factor 8, within the range of 5 to 10 the authors report.
-    \item \textbf{Saturation:} the accuracy of the generative priors stops improving after roughly 200 measurements, because the reconstruction is confined to the range of the generator. From 500 measurements onwards LASSO becomes the most accurate method, as the reference paper predicts.
-    \item \textbf{Comparison between the models:} the fully connected architecture of the paper is the most accurate of the priors and the cheapest of them to invert, while the DCGAN is the least accurate and about 73 times more expensive.
+    \item \textbf{Performance with few measurements:} every generative prior is far more accurate than LASSO when measurements are scarce. The architecture of the reference paper reaches with 75 measurements the accuracy LASSO obtains with 400, a saving of a factor 5.3, within the range of 5 to 10 the authors report.
+    \item \textbf{Saturation:} the accuracy of the generative priors stops improving after roughly 200 measurements, because the reconstruction is confined to the range of the generator. From 500 measurements onwards LASSO becomes the most accurate method, as the reference paper predicts, and with 750 measurements it recovers the digits almost exactly.
+    \item \textbf{Comparison between the models:} the fully connected architecture of the paper is the most accurate of the priors and the cheapest of them to invert, while the DCGAN is the least accurate at almost every budget and about 73 times more expensive.
 \end{enumerate}
 
 \subsection{Conclusion}

@@ -24,7 +24,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from csgm.baselines import lasso_dct_recover
+from csgm.baselines import lasso_recover
 from csgm.config import DEFAULT_SEED, N_PIXELS, RESULTS_DIR
 from csgm.data import load_mnist, sample_images
 from csgm.measurements import gaussian_measurement_matrix, measure
@@ -32,7 +32,7 @@ from csgm.metrics import per_pixel_l2, psnr
 from csgm.recovery import RecoveryConfig, recover
 
 DEFAULT_M_VALUES = (10, 25, 50, 75, 100, 200, 300, 400, 500, 750)
-DEFAULT_METHODS = ("lasso", "vae-20", "vae-30", "dcgan-20", "dcgan-30")
+DEFAULT_METHODS = ("lasso", "lasso-dct", "vae-20", "vae-30", "fcvae-20", "dcgan-20", "dcgan-30")
 
 
 def parse_args() -> argparse.Namespace:
@@ -73,7 +73,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="fixed per-component noise sigma, overriding --noise-norm",
     )
-    parser.add_argument("--lasso-alpha", type=float, default=1e-5, help="Lasso L1 strength")
+    parser.add_argument(
+        "--lasso-alpha",
+        type=float,
+        default=1e-5,
+        help="Lasso L1 strength, chosen by scripts/tune_lasso.py for both bases",
+    )
     parser.add_argument(
         "--image-batch-size", type=int, default=10, help="images optimised in one pass"
     )
@@ -113,7 +118,7 @@ def parse_method(method: str) -> tuple[str, int | None]:
     """Split a method string into ``(family, latent_dim)``.
 
     Args:
-        method: ``"lasso"`` or e.g. ``"dcgan-20"``, ``"fcvae-20"``.
+        method: ``"lasso"``, ``"lasso-dct"``, or e.g. ``"dcgan-20"``.
 
     Returns:
         ``("lasso", None)`` or ``("dcgan", 20)``.
@@ -121,8 +126,8 @@ def parse_method(method: str) -> tuple[str, int | None]:
     Raises:
         ValueError: If the string is not a recognised method.
     """
-    if method == "lasso":
-        return "lasso", None
+    if method in {"lasso", "lasso-dct"}:
+        return method, None
     family, _, dim = method.partition("-")
     if family not in {"vae", "fcvae", "dcgan"} or not dim.isdigit():
         raise ValueError(f"unrecognised method {method!r}")
@@ -145,7 +150,7 @@ def main() -> None:
     generators = {
         method: load_generator(*parse_method(method))
         for method in args.methods
-        if method != "lasso"
+        if not method.startswith("lasso")
     }
 
     rows: list[dict] = []
@@ -164,8 +169,9 @@ def main() -> None:
             family, latent_dim = parse_method(method)
             start = time.perf_counter()
 
-            if family == "lasso":
-                x_hat = lasso_dct_recover(y, A, alpha=args.lasso_alpha)
+            if family.startswith("lasso"):
+                basis = "dct" if family == "lasso-dct" else "pixel"
+                x_hat = lasso_recover(y, A, basis=basis, alpha=args.lasso_alpha)
                 residual = np.linalg.norm(x_hat @ A.T - y, axis=1)
             else:
                 result = recover(

@@ -1,14 +1,14 @@
 \section{Conclusions}
 \vspace{1cm}
-This project assessed the performance of compressed sensing with generative priors on the MNIST dataset, comparing a VAE and a DCGAN of our own design, the fully connected VAE of the reference paper, and LASSO with a DCT basis as a classical baseline.
+This project assessed the performance of compressed sensing with generative priors on the MNIST dataset, comparing a VAE and a DCGAN of our own design, the fully connected VAE of the reference paper, and LASSO in two sparsifying bases as the classical baseline.
 \\\\
 \textbf{Key Findings:}
 
 \begin{enumerate}
     \item \textbf{The result of the reference paper is reproduced:}
     \begin{itemize}
-        \item With the architecture of \cite{bora2017}, 50 measurements are enough to reach the accuracy LASSO requires 400 measurements to obtain, a saving of a factor 8. The authors report a saving between 5 and 10, so our reproduction falls inside the interval they publish.
-        \item From 500 measurements onwards LASSO becomes more accurate than every generative prior, which is the reversal the paper describes and places past the same threshold.
+        \item With the architecture of \cite{bora2017}, 75 measurements are enough to reach the accuracy their LASSO baseline requires 400 measurements to obtain, a saving of a factor 5.3. The authors report a saving between 5 and 10, so our reproduction falls at the lower end of the interval they publish.
+        \item From 500 measurements onwards LASSO becomes more accurate than every generative prior, which is the reversal the paper describes and places past the same threshold. In the pixel basis the reversal is dramatic: with 750 measurements LASSO recovers the digits almost exactly while the generative priors remain on their floors.
     \end{itemize}
     \item \textbf{The advantage has a ceiling, and the ceiling is the generator:}
     \begin{itemize}
@@ -18,11 +18,11 @@ This project assessed the performance of compressed sensing with generative prio
     \item \textbf{The simpler architecture wins:}
     \begin{itemize}
         \item The fully connected network of the reference paper is more accurate than our convolutional VAE at every budget, significantly so from 75 measurements upwards, and it is more than twice as fast to invert.
-        \item The DCGAN is both the least accurate prior and by far the most expensive, about 73 times the cost of the fully connected decoder per reconstruction. On this dataset there is no trade-off to arbitrate: the cheap model is also the good one.
+        \item The DCGAN is the least accurate prior at almost every budget and by far the most expensive, about 73 times the cost of the fully connected decoder per reconstruction. On this dataset there is no trade-off to arbitrate: the cheap model is also the good one.
     \end{itemize}
     \item \textbf{The training procedure is part of the result:}
     \begin{itemize}
-        \item Repeating the same VAE training with different random seeds produced generators whose quality varied by a factor of 3.5, more than any difference between the architectures we set out to compare. The cause was partial posterior collapse.
+        \item Repeating the same VAE training with different random seeds produced generators whose quality varied by a factor of 3.5, comparable to the entire spread between the priors we set out to compare. The cause was partial posterior collapse.
         \item Adding a KL warm-up removed the instability and improved every model. Any comparison between priors is only meaningful once it is larger than this variability, which is why the conclusions above are supported by paired tests rather than by single runs.
     \end{itemize}
 \end{enumerate}
@@ -32,8 +32,9 @@ This project assessed the performance of compressed sensing with generative prio
 \begin{itemize}
     \item \textbf{Reducing the representation error:} the ceiling described above is a property of the generator, so the way to improve the method in the high measurement regime is a more expressive generative model rather than a better recovery algorithm.
     \item \textbf{Understanding why the fully connected model wins:} our convolutional decoder has fewer parameters devoted to the output layer and a stronger spatial inductive bias, and identifying which of the two explains the gap would say something useful about what makes a good prior for this task.
+    \item \textbf{A budget dependent regularizer:} our sweep shows that the value of \( \lambda \) that minimizes the error decreases as measurements are added, from 1 at the smallest budgets to 0 at the largest, so a schedule rather than a constant is the natural refinement.
     \item \textbf{Optimizing measurement matrices:} designing or learning matrices adapted to a specific dataset, keeping in mind that the theoretical guarantee relies on the randomness of \( A \) and would be traded away.
     \item \textbf{Applications beyond MNIST:} MNIST digits form a simple and low dimensional manifold. Applying the method to more complex datasets would test whether the advantage in the low measurement regime survives.
 \end{itemize}
 \vspace{0.01cm}
-In conclusion, combining a generative prior with compressed sensing is worthwhile exactly when measurements are the scarce resource, which is the situation compressed sensing was designed for. The gain is bounded by how well the generator represents the data, and it is paid for with a reconstruction that is orders of magnitude more expensive than a convex solve. Both facts have to be weighed in applications such as medical imaging, where a single measurement can be slow, costly or harmful to the patient, and where the reconstruction happens once.
+In conclusion, combining a generative prior with compressed sensing is worthwhile exactly when measurements are the scarce resource, which is the situation compressed sensing was designed for. On MNIST that regime ends well before the signal dimension is reached, and past it a classical sparsity assumption is not merely competitive but far better. The gain is bounded by how well the generator represents the data, and it is paid for with a reconstruction that is orders of magnitude more expensive than a convex solve. Both facts have to be weighed in applications such as medical imaging, where a single measurement can be slow, costly or harmful to the patient, and where the reconstruction happens once.

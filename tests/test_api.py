@@ -30,7 +30,7 @@ def test_all_is_sorted_and_unique():
         ("measure", ["x", "A", "noise_std", "seed"]),
         ("recover", ["generator", "y", "A", "latent_dim", "config", "track_history"]),
         ("per_pixel_l2", ["x_hat", "x"]),
-        ("lasso_dct_recover", ["y", "A", "alpha", "max_iter", "clip"]),
+        ("lasso_recover", ["y", "A", "basis", "alpha", "max_iter", "clip"]),
     ],
 )
 def test_documented_call_shapes(name, parameters):

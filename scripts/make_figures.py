@@ -19,7 +19,8 @@ from csgm.config import FIGURES_DIR, IMAGE_SHAPE, N_PIXELS, RESULTS_DIR
 from csgm.viz import plot_error_curves, save_figure
 
 LABELS = {
-    "lasso": "Lasso (DCT basis)",
+    "lasso": "Lasso (pixel basis)",
+    "lasso-dct": "Lasso (DCT basis)",
     "fcvae-20": "VAE, paper architecture, k=20",
     "vae-20": "VAE, k=20",
     "vae-30": "VAE, k=30",
@@ -150,7 +151,7 @@ def sample_efficiency(df: pd.DataFrame, results_dir: Path, reference_m: int = 40
         "| prior | measurements needed | speed-up |",
         "|---|---|---|",
     ]
-    for method in (m for m in LABELS if m != "lasso" and m in set(df["method"])):
+    for method in (m for m in LABELS if not m.startswith("lasso") and m in set(df["method"])):
         budgets = means[method]
         matching = budgets.index[budgets <= target]
         if len(matching) == 0:
@@ -185,7 +186,7 @@ def regularisation_comparison(results_dir: Path, figures_dir: Path) -> list[Path
 
     main = pd.read_csv(results_dir / "benchmark.csv")
     plain = pd.read_csv(other)
-    methods = [m for m in LABELS if m != "lasso" and m in set(main["method"])]
+    methods = [m for m in LABELS if not m.startswith("lasso") and m in set(main["method"])]
 
     fig, ax = plt.subplots(figsize=(8.5, 5.2))
     colours = plt.rcParams["axes.prop_cycle"].by_key()["color"]

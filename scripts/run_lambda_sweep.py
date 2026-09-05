@@ -1,8 +1,9 @@
 """Measure the effect of the latent regulariser on recovery quality.
 
 Bora et al. minimise ``||A G(z) - y||^2 + lambda ||z||^2``. The second term keeps
-the solution inside the region where the prior places most of its mass, and the
-main benchmark in this repository leaves it at zero. This script sweeps it.
+the solution inside the region where the prior places most of its mass. The main
+benchmark uses the value they recommend, 0.1; this script sweeps it to show how
+much that choice matters.
 
 Only the VAE decoders are swept: they invert in about twenty seconds per
 configuration, against roughly thirteen minutes for a DCGAN generator, so the

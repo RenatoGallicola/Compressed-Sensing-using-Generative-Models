@@ -77,11 +77,7 @@ The training process for DCGANs involves optimizing the following value function
 \begin{equation}
 \min_G \max_D V(G, D) = \mathbb{E}_{\mathbf{x} \sim p_\text{data}(\mathbf{x})} [\log D(\mathbf{x})] + \mathbb{E}_{\mathbf{z} \sim p_\mathbf{z}(\mathbf{z})} [\log (1 - D(G(\mathbf{z})))]
 \end{equation}
-The training of DCGANs involves alternating between updating the discriminator and the generator. The discriminator is trained to maximize its classification accuracy, while the generator is trained to deceive the discriminator. This iterative process can be summarized in the following steps:
-
-One detail of our implementation is worth mentioning: the labels given to the discriminator are perturbed by a small amount of uniform noise, drawn in \( [0, 0.05] \). This keeps the discriminator from saturating early in training, which would leave the generator without a useful gradient.
-\\
-The procedure can be summarized in the following steps:
+The training of DCGANs involves alternating between updating the discriminator and the generator. The discriminator is trained to maximize its classification accuracy, while the generator is trained to deceive the discriminator. 
 
 One detail of our implementation is worth mentioning: the labels given to the discriminator are perturbed by a small amount of uniform noise, drawn in \( [0, 0.05] \). This keeps the discriminator from saturating early in training, which would leave the generator without a useful gradient.
 \\
@@ -93,10 +89,6 @@ The procedure can be summarized in the following steps:
     \item Sample a new batch of random noise.
     \item Update the generator by minimizing its loss function, which depends on the discriminator's performance.
 \end{enumerate}
-
-\subsubsection{Training Configuration}
-
-Both networks are trained on the full MNIST collection, obtained by concatenating the training and test splits into 70,000 images, since no labels are involved and the model is never evaluated on held out classes. Training runs for 50 epochs with a batch size of 32, using one Adam optimizer for each network with a learning rate of 0.0001 and a binary cross-entropy loss. As for the VAE, two versions were trained, one with a latent vector of dimension 20 and one of dimension 30.
 
 \subsubsection{Training Configuration}
 

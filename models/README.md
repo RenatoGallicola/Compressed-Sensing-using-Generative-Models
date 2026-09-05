@@ -8,7 +8,7 @@ are kept so the adversarial training can be resumed or audited.
 |---|---|---|---|
 | `vae_decoder_dim20.keras` | generator $G$ | 20 | `train_vae.py --latent-dim 20 --seed 1` |
 | `vae_decoder_dim30.keras` | generator $G$ | 30 | `train_vae.py --latent-dim 30 --seed 1` |
-| `fc_vae_decoder_dim20.keras` | generator $G$ | 20 | `train_vae.py --latent-dim 20 --architecture fc` |
+| `fc_vae_decoder_dim20.keras` | generator $G$ | 20 | `train_vae.py --latent-dim 20 --architecture fc --seed 2` |
 | `gan_gen_dim20.keras` | generator $G$ | 20 | `train_dcgan.py --latent-dim 20 --epochs 50` |
 | `gan_gen_dim30.keras` | generator $G$ | 30 | `train_dcgan.py --latent-dim 30 --epochs 50` |
 | `vae_encoder_dim*.keras`, `fc_vae_encoder_dim20.keras` | encoder $q_\phi(z \mid x)$ | as above | saved with the decoder |

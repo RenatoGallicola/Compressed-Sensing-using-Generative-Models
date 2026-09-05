@@ -49,11 +49,14 @@ The ramp length is fixed at 10 epochs here and is not tuned afterwards.
 
 ## Why not simply keep the best model ever obtained
 
-One checkpoint reaches a representation error of 0.0064, better than anything
-this procedure has produced. It comes from a training run that predates this
-repository and cannot be reproduced by the script here. Selecting it because it
-scores well on the recovery benchmark would be selection on the test measurement,
-which is exactly what rules 3 and 4 exist to prevent.
+At the time of writing, one checkpoint reached a representation error of 0.0064,
+better than anything this procedure had produced. It came from a training run
+that predates this repository and cannot be reproduced by the script here.
+Selecting it because it scores well on the recovery benchmark would be selection
+on the test measurement, which is exactly what rules 3 and 4 exist to prevent.
+
+As the outcome below records, the question became moot: the procedure defined
+here produced a better model than that one.
 
 
 ## Outcome

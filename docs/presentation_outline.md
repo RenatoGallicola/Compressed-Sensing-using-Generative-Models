@@ -5,9 +5,9 @@ English to match the report; the talk can be given in either language. Slide 14
 is the one to drop if you are running short.
 
 Each entry lists what goes on the slide, which figure to use, and what to say.
-Figure paths are relative to the repository root. Every number quoted here comes
-from `results/summary.md`, `results/sample_efficiency.md` and
-`results/benchmark.csv`.
+Figure paths are relative to the repository root. Every number quoted here comes from the
+files under `results/` and from `docs/model_selection.md`, and each slide names
+the one it draws on.
 
 ---
 
@@ -24,7 +24,7 @@ Numerical Analysis for Machine Learning.
 
 $$y = A x^{\ast} + \eta, \qquad A \in \mathbb{R}^{m \times n}, \quad m \ll n$$
 
-and one sentence: recover a 784 pixel image from 50 numbers.
+and one sentence: recover a 784 pixel image from 75 numbers.
 
 **Say.** The system is underdetermined, so it has infinitely many solutions and
 recovery is impossible without an assumption about which solutions are
@@ -67,6 +67,9 @@ which will matter on slide 12.
 | VAE | maximising the ELBO | convolutional, ours |
 | DCGAN | adversarial minimax game | convolutional, ours |
 | VAE, paper | maximising the ELBO | fully connected 784-500-500-20 |
+
+Baselines: Lasso in the pixel basis, which is what the paper uses on MNIST, and
+Lasso in the DCT basis.
 
 **Say.** The first two are our own designs, each trained at latent dimension 20
 and 30. The third is the network Bora et al. actually use on MNIST. We included
@@ -144,13 +147,14 @@ optimisation converged and not how good the answer is.
 
 **Say.**
 
-- At 25 measurements the best prior reaches 0.0225 against 0.1049 for Lasso,
-  **4.7 times better**, at a budget where the Lasso reconstruction is not a
-  digit at all.
-- Lasso needs 400 measurements to reach 0.0117. The paper's architecture gets
-  there with **50**, an **8x** saving. The paper reports 5 to 10x, so the
-  reproduction lands inside their interval.
-- Our convolutional VAEs give 5.3x, the DCGAN 2x.
+- At 25 measurements the best prior reaches 0.0225 against 0.1255 for the
+  paper's Lasso baseline, **5.6 times better**, at a budget where neither
+  baseline returns anything recognisable.
+- Lasso needs 400 measurements to reach 0.0108. The paper's architecture gets
+  there with **75**, a **5.3x** saving. The paper reports 5 to 10x, so the
+  reproduction lands at the bottom of their interval.
+- Two baseline curves, not one: the paper uses the pixel basis on MNIST, the DCT
+  basis is stronger below 400 measurements and much weaker above.
 
 ---
 
@@ -158,8 +162,8 @@ optimisation converged and not how good the answer is.
 
 **Slide.** `results/figures/reconstruction_grid.png`.
 
-**Say.** Lasso returns noise until about 200 measurements while every generative
-prior produces a plausible digit almost immediately. The DCGAN gives visibly
+**Say.** Both baselines return noise until about 200 measurements while every
+generative prior produces a plausible digit almost immediately. The DCGAN gives visibly
 sharper strokes, because an adversarial generator is pushed towards samples a
 discriminator accepts rather than towards the average of the plausible ones. But
 sharper is not more accurate: a crisp digit of the wrong shape scores worse than
@@ -182,11 +186,11 @@ a slightly soft one of the right shape, and the table bears that out.
 **Say.** Past roughly 200 measurements the learned priors stop improving. The
 bottleneck is no longer information, it is that the true digit is not in the
 range of G, and that distance does not depend on the budget. From 500
-measurements Lasso overtakes everything, and at 750 it is 4.3 times more
-accurate than the best generative model. The paper says the reversal takes more
-than 500 measurements and we find it exactly there. A factor 3.6 separates the
-best floor from the worst, so on this side of the plot the generator matters far
-more than the recovery algorithm.
+measurements Lasso overtakes everything, and at 750 it recovers the digits
+almost exactly while the priors stay put. The paper says the reversal takes more
+than 500 measurements and we find it there. A factor 3.6 separates the best floor
+from the worst, so on this side of the plot the generator matters far more than
+the recovery algorithm.
 
 ---
 
@@ -198,13 +202,15 @@ more than the recovery algorithm.
 comparisons are paired and we test them that way.
 
 - **The paper's simpler network beats ours.** Same latent dimension,
-  significantly more accurate from 75 measurements up, p between 0.003 and
-  0.001, better on 9 of 10 images. We did not expect that.
-- **k=30 beats k=20, but only from 75 measurements up.** Below that the
-  difference is not significant and its sign is not even stable: too few
-  measurements to determine the extra coordinates.
-- **The VAE beats the DCGAN where measurements are scarce**, p = 0.011 at 10
-  measurements; from 200 they are indistinguishable.
+  significantly more accurate from 75 measurements up, p at or below 0.004,
+  better on 9 of 10 images. We did not expect that.
+- **k=30 beats k=20, but only from 75 measurements up**, p = 0.028 there and at
+  or below 0.005 above. Below 75 the difference is not significant and its sign
+  is not even stable: too few measurements to determine the extra coordinates.
+- **The VAE beats the DCGAN at 10 and 50 measurements**, p = 0.011 and 0.024,
+  but not at 25, 75 or 100; from 200 they are indistinguishable. Say that out
+  loud rather than rounding it up to "the VAE wins when measurements are
+  scarce".
 
 Saying out loud which differences do not reach significance is worth more than
 claiming five results and defending three.
@@ -220,8 +226,10 @@ same. It helps exactly where the measurements underdetermine the code: at 10
 measurements it takes the best model from 0.0808 to 0.0609, a 25% gain. It costs
 slightly once measurements are plentiful, 0.0054 to 0.0064 at 750, because the
 same pull towards the prior keeps the solution off the closest point in the
-range. The sweep over lambda confirms the mechanism directly: the norm of the
-recovered code falls monotonically from 7.7 to 2.5.
+range. The sweep confirms the mechanism: the norm of the recovered code falls
+monotonically from 7.7 to 2.5, and the best value of lambda is not fixed but
+falls with the budget, 1 at 10 measurements and 0 from 200 up. The single value
+the paper recommends is a compromise, not an optimum at any one budget.
 
 ---
 
@@ -236,11 +244,13 @@ recovered code falls monotonically from 7.7 to 2.5.
 | VAE, convolutional | about 15 |
 | DCGAN | about 496 |
 
-**Say.** A **73x** gap between the cheapest and the dearest learned prior,
-driven by the size of the generator: 0.65 million parameters against 2.9
-million. The cost is paid at every reconstruction, since recovery is itself an
-optimisation. And the punchline: the most expensive prior is also the least
-accurate, so there is no trade-off to arbitrate here.
+**Say.** A **73x** gap between the cheapest and the dearest learned prior.
+Parameter count does not explain it: the DCGAN generator is only 4.5x larger, and
+our convolutional decoder is smaller than the paper's yet twice as slow. What it
+tracks is arithmetic per forward pass, and the DCGAN convolves 256 and 512
+channels at nearly full resolution. The cost is paid at every reconstruction,
+since recovery is itself an optimisation. And the punchline: the most expensive
+prior is also the least accurate at almost every budget.
 
 ---
 
@@ -268,7 +278,7 @@ the repository.
 
 **Slide.** Three lines.
 
-- A learned prior is worth about eight times fewer measurements in the regime
+- A learned prior is worth about five times fewer measurements in the regime
   where measurements are scarce, which is the regime compressed sensing exists
   for, and that reproduces the reference paper.
 - It buys that with a ceiling set by the generator, and with a reconstruction

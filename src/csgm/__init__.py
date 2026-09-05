@@ -12,7 +12,7 @@ The public API is intentionally small:
 >>> result = recover(generator, y, A, latent_dim=20)   # doctest: +SKIP
 """
 
-from csgm.baselines import lasso_dct_recover
+from csgm.baselines import lasso_recover
 from csgm.config import IMAGE_SHAPE, MODELS_DIR, N_PIXELS, RESULTS_DIR
 from csgm.data import load_mnist, sample_images
 from csgm.measurements import gaussian_measurement_matrix, measure
@@ -27,7 +27,7 @@ __all__ = [
     "RecoveryConfig",
     "RecoveryResult",
     "gaussian_measurement_matrix",
-    "lasso_dct_recover",
+    "lasso_recover",
     "load_mnist",
     "measure",
     "per_pixel_l2",

@@ -27,6 +27,7 @@
     "dcgan-30",
     "fcvae-20",
     "lasso",
+    "lasso-dct",
     "vae-20",
     "vae-30"
   ]
