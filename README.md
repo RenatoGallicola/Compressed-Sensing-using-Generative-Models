@@ -226,6 +226,7 @@ afterwards, is in [`docs/model_selection.md`](docs/model_selection.md).
 │   ├── train_dcgan.py           train the DCGAN, save the generator
 │   ├── run_benchmark.py         the full sweep -> results/benchmark.csv
 │   ├── run_lambda_sweep.py      sensitivity to the latent regulariser
+│   ├── tune_lasso.py            picks the baseline's basis and shrinkage
 │   └── make_figures.py          csv -> figures and summary tables
 ├── notebooks/                 narrated walkthrough (01 VAE, 02 DCGAN, 03 Lasso, 04 recovery)
 ├── models/                    pre-trained checkpoints (k = 20 and k = 30)

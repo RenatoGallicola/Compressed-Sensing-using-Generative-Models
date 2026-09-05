@@ -11,6 +11,7 @@
 | `reconstructions.npz` | every reconstruction, keyed `<method>__m<budget>`, plus `ground_truth` |
 | `unregularised/` | the same sweep with $\lambda = 0$, for the comparison the reference paper draws |
 | `lambda_sweep.csv` | `run_lambda_sweep.py` output: error and latent norm for several values of $\lambda$ |
+| `lasso_tuning.csv` | `tune_lasso.py` output: the shrinkage sweep used to configure the baseline |
 
 `python scripts/make_figures.py` then turns that table into:
 
