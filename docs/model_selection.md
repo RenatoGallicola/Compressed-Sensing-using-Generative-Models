@@ -76,7 +76,7 @@ the latent code is actually used:
 Rule 2 selects seed 1 for both latent dimensions. Measuring the selected models
 afterwards, on the representation error they were not selected on:
 
-| | without warm-up, best of 3 | with warm-up, selected |
+| | without warm-up, best of the earlier runs | with warm-up, selected |
 |---|---|---|
 | `k=20` | 0.0112 | **0.0078** |
 | `k=30` | 0.0103 | **0.0052** |

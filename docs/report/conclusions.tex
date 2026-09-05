@@ -7,13 +7,13 @@ This project assessed the performance of compressed sensing with generative prio
 \begin{enumerate}
     \item \textbf{The result of the reference paper is reproduced:}
     \begin{itemize}
-        \item With the architecture of \cite{bora2017}, 75 measurements are enough to reach the accuracy their LASSO baseline requires 400 measurements to obtain, a saving of a factor 5.3. The authors report a saving between 5 and 10, so our reproduction falls at the lower end of the interval they publish.
-        \item From 500 measurements onwards LASSO becomes more accurate than every generative prior, which is the reversal the paper describes and places past the same threshold. In the pixel basis the reversal is dramatic: with 750 measurements LASSO recovers the digits almost exactly while the generative priors remain on their floors.
+        \item With the architecture of \cite{bora2017}, 50 measurements are enough to reach the accuracy the DCT baseline requires 400 measurements to obtain, a saving of a factor 8, and it is more accurate than that baseline on 8 of the 10 individual test images at that budget. The authors report a saving between 5 and 10, so our reproduction falls inside the interval they publish.
+        \item From 500 measurements onwards both LASSO baselines are more accurate than every generative prior. The paper describes the same reversal and states that it requires more than 500 measurements. In the pixel basis it is dramatic: with 750 measurements LASSO recovers the digits almost exactly while the generative priors remain on their floors.
     \end{itemize}
     \item \textbf{The advantage has a ceiling, and the ceiling is the generator:}
     \begin{itemize}
         \item The accuracy of the generative priors stops improving after roughly 200 measurements, because the reconstruction is constrained to the range of the generator and the distance between a real digit and that range does not depend on the number of measurements.
-        \item That floor ranges from 0.0065 for the best model to 0.0233 for the worst, a factor 3.6 between priors, so the choice of generator matters far more than any refinement of the recovery algorithm in this regime.
+        \item Averaged over the budgets from 300 upwards, that floor ranges from 0.0065 for the best model to 0.0233 for the worst, a factor 3.6 between priors, so the choice of generator matters far more than any refinement of the recovery algorithm in this regime.
     \end{itemize}
     \item \textbf{The simpler architecture wins:}
     \begin{itemize}

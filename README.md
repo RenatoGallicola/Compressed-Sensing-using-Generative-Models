@@ -9,8 +9,8 @@
 Reproduction and extension of **Bora, Jalal, Price & Dimakis, *Compressed Sensing
 using Generative Models* (ICML 2017)** on MNIST: a DCGAN generator and a VAE
 decoder are used as *learned priors* to reconstruct images from a handful of
-random linear measurements, and benchmarked against the classical Lasso/DCT
-sparsity prior.
+random linear measurements, and benchmarked against Lasso in two sparsifying
+bases as the classical sparsity prior.
 
 > Course project for **Numerical Analysis for Machine Learning**, MSc in Computer
 > Science and Engineering, Politecnico di Milano.
@@ -21,11 +21,12 @@ sparsity prior.
        alt="Reconstruction error against the number of measurements, for two Lasso baselines and five generative priors">
 </p>
 
-**A VAE prior recovers an MNIST digit from 75 random measurements about as
-accurately as Lasso does from 400, a 5.3x saving.** From 500 measurements the
-ranking reverses and Lasso wins outright, because a generative prior can only
-ever return an image its generator is able to produce. Both effects, and the
-threshold, are what Bora et al. report.
+**A VAE prior recovers an MNIST digit from 50 random measurements about as
+accurately as Lasso in a DCT basis does from 400, an 8x saving, and it is the
+more accurate of the two on 8 of the 10 test digits at that budget.** From 500
+measurements the ranking reverses and Lasso wins outright, because a generative
+prior can only ever return an image its generator is able to produce. Both
+effects, and the threshold, are what Bora et al. report.
 
 ---
 
@@ -82,9 +83,9 @@ projection followed by transposed convolutions, but at very different scales:
 | output | transposed conv, 1 filter, sigmoid | conv, 1 filter, sigmoid |
 | parameters ($k=20$) | 282,177 | 2,921,473 |
 
-The paper's decoder has 653,784 parameters, between the two. The tenfold spread
-in size is what makes the DCGAN so much more expensive to invert, and it turns
-out to buy nothing in accuracy.
+The paper's decoder has 653,784 parameters, between the two. Size is only part
+of the story for the cost of inverting them, as the Cost section below shows,
+and it buys nothing at all in accuracy.
 
 The measurement matrix $A$ has i.i.d. $\mathcal{N}(0, 1/m)$ entries, which makes
 it an approximate isometry in expectation ($\mathbb{E}\lVert Ax \rVert^2 = \lVert x \rVert^2$),
@@ -118,10 +119,12 @@ method, budget and image. The same sweep without the regulariser is in
 **Two baselines, not one.** Bora et al. run Lasso on MNIST in the *pixel* basis,
 since digits are mostly background and therefore already sparse there. The DCT
 basis is what the same authors use for natural images. The two behave very
-differently here, DCT better below 400 measurements and pixel far better above,
-so reporting only one would misrepresent how strong the classical method is. The
-shrinkage was swept over six orders of magnitude for each basis and set to its
-best value, and reconstructions are clipped to `[0, 1]`, which also helps the
+differently here: the DCT basis is the better of the two from 25 to 300
+measurements, the pixel basis at 10 and from 400 up, where it becomes almost
+exact. Reporting only one would misrepresent how strong the classical method is.
+The
+shrinkage was swept over six values spanning five orders of magnitude for each
+basis and set to its best value, and reconstructions are clipped to `[0, 1]`, which also helps the
 baseline.
 
 ### Three regimes
@@ -131,11 +134,21 @@ baselines. At 25 measurements the best of them is 5.6x more accurate than the
 paper's baseline and 4.7x more accurate than the DCT one, at a budget where
 neither returns anything recognisable as a digit.
 
-**Sample efficiency.** Lasso needs 400 measurements to reach a per-pixel error of
-0.0108. The paper's architecture reaches it with **75**, a **5.3x** saving, and
-so does our convolutional VAE at k=30; at k=20 it needs 100, a 4x saving, and the
-DCGAN needs 200, a 2x saving. Bora et al. report 5 to 10x, so the reproduction of
-their architecture lands at the bottom of that interval.
+**Sample efficiency**, measured against the DCT baseline, which reaches 0.0117
+at 400 measurements. The paper's architecture reaches that level with **50**, an
+**8x** saving, beating the baseline on 8 of the 10 individual digits there. Our
+convolutional VAE at k=30 needs 75, a 5.3x saving on 7 of 10 digits; at k=20 it
+also needs 75 but wins on only 5 of 10, so its saving is nominal. The DCGAN needs
+200, a 2x saving on 8 of 10. Bora et al. report 5 to 10x, so the reproduction of
+their architecture lands inside that interval.
+
+The pixel baseline cannot be the reference at this budget, and that is worth
+saying rather than hiding. At 400 measurements its mean error is 0.0108 but its
+median is 0.0005: six of the ten digits are already recovered to better than
+0.001 and one is still at 0.084. That budget sits in the middle of its transition
+from failure to near-exact recovery, so its mean describes the digits it has not
+solved rather than a level anything can be compared against. The DCT baseline
+there has mean 0.0117, median 0.0124 and worst case 0.0169.
 
 **Abundant measurements, from 500 up.** Lasso in the pixel basis overtakes every
 learned prior and keeps improving, reaching an error below 1e-4 at 750
@@ -185,14 +198,17 @@ where they do not. At 10 measurements it improves the best model from 0.0808 to
 0.0609, a 25% gain; at 750 it costs, moving 0.0054 to 0.0064. The sweep makes the
 mechanism explicit: the norm of the recovered code falls monotonically with
 lambda, from 7.7 to 2.5, and the value that minimises the error is **not fixed**.
-It is 1 at 10 and 25 measurements, 0.01 around 50 to 100, and 0 for every budget
-of 200 and above. The single value the paper recommends is a compromise across
-regimes rather than an optimum at any one of them.
+It is 1 for all three priors at 10 and 25 measurements and 0 for all of them from
+200 up; in between they disagree. The single value the paper recommends is a
+compromise across regimes rather than an optimum at any one of them. The sweep
+covers the three VAE priors only, since repeating it for the DCGANs would cost
+hours.
 
 ### Cost
 
 Recovering ten images at one budget, ten restarts and a thousand Adam steps:
-about 1 s with Lasso, 6.8 s with the paper's decoder, about 15 s with our
+1.4 s with Lasso in the pixel basis and 0.9 s in the DCT basis, 6.8 s with the
+paper's decoder, about 15 s with our
 convolutional decoders and about 496 s with a DCGAN generator, a **73x** gap
 between the cheapest and the dearest learned prior. Parameter counts do not
 explain that: the DCGAN generator is only 4.5x larger than the paper's decoder,
@@ -217,7 +233,7 @@ afterwards, is in [`docs/model_selection.md`](docs/model_selection.md).
 ├── src/csgm/                  installable package -- all the logic lives here
 │   ├── measurements.py          random Gaussian sensing operator
 │   ├── recovery.py              latent-space optimisation (the core algorithm)
-│   ├── baselines.py             Lasso in an orthonormal DCT basis
+│   ├── baselines.py             Lasso in the pixel or the DCT basis
 │   ├── metrics.py               per-pixel L2 error, PSNR
 │   ├── data.py, viz.py          MNIST loading, plotting helpers
 │   └── models/                  VAE, DCGAN, checkpoint loading
@@ -337,7 +353,7 @@ criterion available when the ground truth is unknown.
 **The VAEs are trained with a KL warm-up.** The weight of the KL term is ramped
 from zero to one over the first ten epochs. Without it, training frequently ends
 in partial posterior collapse and the quality of the resulting prior varies by a
-factor of three between random seeds; see
+factor of 3.5 between random seeds; see
 [`docs/model_selection.md`](docs/model_selection.md).
 
 **The baseline is given its best configuration.** Lasso is reported in two
@@ -371,9 +387,10 @@ deviation is $0.1/\sqrt{m}$.
 - **Recovery is expensive.** Each reconstruction runs 1000 gradient steps
   by 10 restarts through the generator, orders of magnitude slower than a
   single convex solve.
-- **Ten test images.** Enough for the paired comparisons reported above to
-  reach significance from 75 measurements up, not enough to separate the priors
-  in the very-low-budget regime, where the error bars overlap.
+- **Ten test images.** Enough for the comparisons between generative priors to
+  reach significance from 75 measurements up, and for the VAE against the DCGAN
+  at 10 and 50, but not everywhere in between. Which comparisons hold at which
+  budget is stated above rather than averaged over.
 - **The DCGANs were not retrained.** The variance study and the KL warm-up cover
   the VAEs only; retraining a DCGAN takes about ten hours on CPU, so its
   checkpoints are the original ones and the same variability may affect them.

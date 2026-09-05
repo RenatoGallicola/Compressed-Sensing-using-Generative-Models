@@ -5,9 +5,9 @@ English to match the report; the talk can be given in either language. Slide 14
 is the one to drop if you are running short.
 
 Each entry lists what goes on the slide, which figure to use, and what to say.
-Figure paths are relative to the repository root. Every number quoted here comes from the
-files under `results/` and from `docs/model_selection.md`, and each slide names
-the one it draws on.
+Figure paths are relative to the repository root. Every number quoted here comes
+from `results/benchmark.csv` and the tables generated from it, except those on
+slide 16, which come from `docs/model_selection.md`.
 
 ---
 
@@ -148,13 +148,14 @@ optimisation converged and not how good the answer is.
 **Say.**
 
 - At 25 measurements the best prior reaches 0.0225 against 0.1255 for the
-  paper's Lasso baseline, **5.6 times better**, at a budget where neither
-  baseline returns anything recognisable.
-- Lasso needs 400 measurements to reach 0.0108. The paper's architecture gets
-  there with **75**, a **5.3x** saving. The paper reports 5 to 10x, so the
-  reproduction lands at the bottom of their interval.
-- Two baseline curves, not one: the paper uses the pixel basis on MNIST, the DCT
-  basis is stronger below 400 measurements and much weaker above.
+  paper's pixel baseline and 0.1049 for the DCT one, **5.6 and 4.7 times
+  better**, at a budget where neither baseline returns anything recognisable.
+- The DCT baseline needs 400 measurements to reach 0.0117. The paper's
+  architecture gets there with **50**, an **8x** saving, and beats that baseline
+  on 8 of the 10 digits. The paper reports 5 to 10x, so we land inside it.
+- If asked why the DCT baseline is the reference: at 400 measurements the pixel
+  one is mid-transition, median 0.0005 against mean 0.0108, so its mean is not a
+  level anything can be compared against.
 
 ---
 
@@ -173,7 +174,8 @@ a slightly soft one of the right shape, and the table bears that out.
 
 ## 12. The ceiling
 
-**Slide.** The flat part of the curves, with the floors.
+**Slide.** The flat part of the curves, with the floors, averaged from 300
+measurements up.
 
 | prior | error floor |
 |---|---|
@@ -186,9 +188,9 @@ a slightly soft one of the right shape, and the table bears that out.
 **Say.** Past roughly 200 measurements the learned priors stop improving. The
 bottleneck is no longer information, it is that the true digit is not in the
 range of G, and that distance does not depend on the budget. From 500
-measurements Lasso overtakes everything, and at 750 it recovers the digits
-almost exactly while the priors stay put. The paper says the reversal takes more
-than 500 measurements and we find it there. A factor 3.6 separates the best floor
+measurements both baselines overtake everything, and at 750 the pixel one
+recovers the digits almost exactly while the priors stay put. The paper says the
+reversal takes more than 500 measurements; we see it from 500 onwards. A factor 3.6 separates the best floor
 from the worst, so on this side of the plot the generator matters far more than
 the recovery algorithm.
 
@@ -239,7 +241,8 @@ the paper recommends is a compromise, not an optimum at any one budget.
 
 | method | seconds to recover 10 images at one budget |
 |---|---|
-| Lasso | 1.0 |
+| Lasso, pixel basis | 1.4 |
+| Lasso, DCT basis | 0.9 |
 | VAE, paper architecture | 6.8 |
 | VAE, convolutional | about 15 |
 | DCGAN | about 496 |
@@ -259,8 +262,8 @@ prior is also the least accurate at almost every budget.
 **Slide.** The variance table from `docs/model_selection.md`.
 
 **Say.** Training the same VAE with different random seeds gave generators whose
-quality varied by a factor of **3.5**, larger than any difference between the
-architectures we set out to compare. The cause was partial posterior collapse:
+quality varied by a factor of **3.5**, comparable to the entire spread between
+the architectures we set out to compare. The cause was partial posterior collapse:
 the decoder leaning on a handful of latent directions and ignoring the rest,
 which we measured directly. Adding a KL warm-up fixed it, and the spread across
 seeds fell to a factor 1.2.
@@ -325,9 +328,10 @@ far fewer parameters to the output layer, and its spatial inductive bias may be
 the wrong one for a manifold this simple. Separating them is future work.
 
 **Ten test images is not many.**
-Correct. It is enough for the paired comparisons to reach significance from 75
-measurements up, and not enough below that, which is exactly what slide 13 says.
-The cost is the DCGAN recovery, about 500 seconds per budget.
+Correct, and slide 13 says which comparisons survive and which do not: the ones
+between generative priors from 75 measurements up, the VAE against the DCGAN at
+10 and 50 but not in between. The cost of more images is the DCGAN recovery,
+about 500 seconds per budget.
 
 **What does the theoretical guarantee actually require?**
 That G is L-Lipschitz and that A is random Gaussian. It bounds the error

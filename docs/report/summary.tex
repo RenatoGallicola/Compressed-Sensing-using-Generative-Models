@@ -19,7 +19,7 @@ We employed two approaches to reconstruct the images from compressed measurement
 \end{enumerate}
 Each of the two was trained with a latent vector of dimension 20 and of dimension 30. We also trained the fully connected auto-encoder used by Bora et al., so that our results can be compared directly with the ones they publish.
 \\
-For all the models, we used a random Gaussian matrix for the measurements. The compression levels varied from 10 to 750 measurements per image, out of the 784 pixels of a full image, allowing us to observe the reconstruction quality across different levels of compression.
+For all the models, we used a random Gaussian matrix for the measurements, and LASSO was run in two sparsifying bases, the pixel basis used by the reference paper on MNIST and the DCT basis. The compression levels varied from 10 to 750 measurements per image, out of the 784 pixels of a full image, allowing us to observe the reconstruction quality across different levels of compression.
 
 \subsection{Algorithm explanation}
 
@@ -47,8 +47,8 @@ The MNIST images were vectorized, resulting in 784-dimensional input vectors. Ea
 The reconstruction performance was evaluated as the squared error between the original and the reconstructed image, divided by the number of pixels, averaged over ten test images, one for each digit class. The following observations were made:
 
 \begin{enumerate}
-    \item \textbf{Performance with few measurements:} every generative prior is far more accurate than LASSO when measurements are scarce. The architecture of the reference paper reaches with 75 measurements the accuracy LASSO obtains with 400, a saving of a factor 5.3, within the range of 5 to 10 the authors report.
-    \item \textbf{Saturation:} the accuracy of the generative priors stops improving after roughly 200 measurements, because the reconstruction is confined to the range of the generator. From 500 measurements onwards LASSO becomes the most accurate method, as the reference paper predicts, and with 750 measurements it recovers the digits almost exactly.
+    \item \textbf{Performance with few measurements:} every generative prior is far more accurate than either LASSO baseline when measurements are scarce. The architecture of the reference paper reaches with 50 measurements the accuracy the DCT baseline obtains with 400, a saving of a factor 8, within the range of 5 to 10 the authors report.
+    \item \textbf{Saturation:} the accuracy of the generative priors stops improving after roughly 200 measurements, because the reconstruction is confined to the range of the generator. From 500 measurements onwards both LASSO baselines become more accurate, as the reference paper predicts, and with 750 measurements the one in the pixel basis recovers the digits almost exactly.
     \item \textbf{Comparison between the models:} the fully connected architecture of the paper is the most accurate of the priors and the cheapest of them to invert, while the DCGAN is the least accurate at almost every budget and about 73 times more expensive.
 \end{enumerate}
 
