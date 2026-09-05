@@ -7,7 +7,7 @@ name = "csgm"
 version = "1.0.0"
 description = "Compressed sensing with deep generative priors (DCGAN / VAE) on MNIST"
 readme = "README.md"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.13"
 license = { file = "LICENSE" }
 authors = [
     { name = "Renato Gallicola" },
@@ -20,6 +20,7 @@ classifiers = [
 ]
 dependencies = [
     "tensorflow>=2.16,<2.18",
+    "keras>=3.15,<3.16",
     "numpy>=1.26,<2",
     "scipy>=1.11",
     "scikit-learn>=1.3",
