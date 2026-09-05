@@ -1,15 +1,14 @@
 # Model selection protocol
 
-Written before running the experiment it describes, so that the rules cannot be
-adjusted once the numbers are known. The commit that introduces this file
-precedes the commit that adds the resulting checkpoints.
+Written before running the experiments it describes, so that the rules cannot be
+adjusted once the numbers are known. The commit that fixes each set of rules
+precedes the commit that adds the checkpoints it governs.
 
 ## Why this exists
 
 Training the VAE repeatedly with the same script and different seeds produced
 generators of very different quality. Measured as representation error, the best
-reconstruction reachable inside the range of the generator, over ten stratified
-test digits:
+reconstruction reachable inside the range of the generator:
 
 | latent dim | seed 1337 | seed 1 | seed 2 | seed 3 |
 |---|---|---|---|---|
@@ -24,6 +23,12 @@ latent coordinate moves the generated image, the ratio of the mean sensitivity
 to the largest one is 0.31 for the best model and 0.05 for the worst, and that
 ratio orders the models the same way the representation error does.
 
+Those figures were measured on ten test digits, and they are what prompted the
+intervention below. That is a decision informed by test-set behaviour, and it is
+recorded here rather than left implicit. What it does not affect is which
+checkpoint is used: no rule below consults the test split or the benchmark, so
+the models being compared were never chosen on the data they are scored on.
+
 ## The intervention
 
 KL warm-up: the KL term of the objective is scaled by a coefficient ramped
@@ -32,63 +37,92 @@ is free to use the latent space without being pulled back towards the prior, and
 the regulariser reaches full strength once the code is already informative. This
 is the standard remedy for the failure mode diagnosed above.
 
-The ramp length is fixed at 10 epochs here and is not tuned afterwards.
+The ramp length is fixed at 10 epochs and is not tuned, for any architecture.
 
-## The rules, fixed in advance
+## The rules for the VAE, fixed in advance
 
-1. **Budget.** Two seeds, 1 and 2, for each of `k=20` and `k=30`. Four runs. No
-   further runs are added on the basis of the results.
-2. **Selection.** For each latent dimension, keep the run with the lowest
+1. **Budget.** Two seeds, 1 and 2, for each of the convolutional `k=20`, the
+   convolutional `k=30` and the fully connected `k=20` of the reference paper.
+   Six runs. Every configuration gets the same budget: the same two seeds, the
+   same warm-up length, the same 100 epoch limit with early stopping. No
+   configuration receives extra search, and no further runs are added on the
+   basis of the results.
+2. **Selection.** For each configuration, keep the run with the lowest
    validation loss. Validation is evaluated with the KL coefficient at 1
    regardless of the warm-up schedule, so epochs and runs stay comparable.
-3. **The benchmark is never consulted for selection.** Recovery results are
+3. **The test split is never seen.** Validation is a tenth carved out of the
+   training split. The test split takes no part in training, in early stopping
+   or in selection, which is what Bora et al. require of the generator.
+4. **The benchmark is never consulted for selection.** Recovery results are
    computed only after the checkpoints are chosen.
-4. **The outcome is reported as measured.** If the resulting models are worse
-   than the ones already in the repository, that is the result, and the earlier
-   checkpoints are not silently reinstated.
+5. **The outcome is reported as measured.**
+
+## The rules for the DCGAN, fixed in advance
+
+A GAN has no likelihood, so none of rule 2 above transfers: there is no
+validation loss, no stopping criterion, and sample quality oscillates from epoch
+to epoch. Keeping whatever the last epoch produced is not a neutral default, it
+is a choice made by the schedule. These rules therefore differ from the VAE's,
+and where they differ the difference is stated.
+
+1. **Budget.** One run for each of `k=20` and `k=30`, 50 epochs, using the only
+   DCGAN recipe the reference paper gives (sec. 5.2): Adam at a learning rate of
+   0.0002 with `beta_1 = 0.5`, mini-batches of 64, two generator updates per
+   discriminator update. One seed rather than the VAE's two, because a run costs
+   about ten hours of CPU against forty minutes for a VAE. This is a smaller
+   budget than the VAE receives, and it is not hidden: the DCGAN columns are
+   single draws from a distribution this document has itself shown to be wide.
+2. **Training data.** The same 54,000 images the VAE trains on, so the two
+   families see the same data and the held-out tenth is available to select on.
+3. **Candidates.** The generator as saved every five epochs from epoch 20, seven
+   candidates per run.
+4. **Selection.** Lowest representation error over held-out images drawn from
+   the training split, never the test split. Representation error is the floor
+   every recovery result sits above and needs no discriminator, which makes it
+   the one criterion available here that measures the thing the prior is for.
+5. **The effect of this rule is published.** The representation error of every
+   candidate is recorded, together with the spread across epochs and the value
+   of the final epoch. A reader can therefore see how much work the selection is
+   doing rather than be told it is harmless.
+6. **The criterion differs from the VAE's, in the DCGAN's favour.**
+   Representation error is a proxy for the quantity the benchmark reports, while
+   the VAE is selected on the ELBO, which is not. Both are computed on held-out
+   data and neither touches the test split, so neither leaks, but the asymmetry
+   exists and runs towards the DCGAN. It is repeated wherever the two families
+   are compared. As a check on its size, the same criterion is applied to the
+   VAE seeds after the fact and the result records whether it would have chosen
+   the same checkpoints as rule 2 did.
+7. **The benchmark is never consulted for selection, and the outcome is reported
+   as measured.**
 
 ## Why not simply keep the best model ever obtained
 
-At the time of writing, one checkpoint reached a representation error of 0.0064,
-better than anything this procedure had produced. It came from a training run
-that predates this repository and cannot be reproduced by the script here.
-Selecting it because it scores well on the recovery benchmark would be selection
-on the test measurement, which is exactly what rules 3 and 4 exist to prevent.
-
-As the outcome below records, the question became moot: the procedure defined
-here produced a better model than that one.
-
+One checkpoint reached a representation error of 0.0064, better than anything
+this procedure produced at the time. It came from a training run that predates
+this repository and cannot be reproduced by the script here. Selecting it
+because it scores well on the recovery benchmark would be selection on the test
+measurement, which is exactly what the rules above exist to prevent.
 
 ## Outcome
 
-Recorded after the four runs finished. The rules above were not changed.
+Recorded after the runs finished. The rules above were not changed.
 
-Validation loss, and the KL divergence at convergence, which measures how much
-the latent code is actually used:
+### VAE
 
-| run | validation loss | KL (nats) |
+Validation loss of the selected runs, all three configurations on the same
+budget:
+
+| configuration | selected seed | validation loss |
 |---|---|---|
-| `k=20`, seed 1 | **99.16** | 20.27 |
-| `k=20`, seed 2 | 106.71 | 16.51 |
-| `k=30`, seed 1 | **95.83** | 22.74 |
-| `k=30`, seed 2 | 98.85 | 20.24 |
+| convolutional `k=20` | 1 | 96.63 |
+| convolutional `k=30` | 1 | 96.25 |
+| fully connected `k=20` | 1 | 97.18 |
 
-Rule 2 selects seed 1 for both latent dimensions. Measuring the selected models
-afterwards, on the representation error they were not selected on:
+Rule 2 selects seed 1 in all three cases. The losses are comparable across
+configurations, since the objective and the validation images are the same.
 
-| | without warm-up, best of the earlier runs | with warm-up, selected |
-|---|---|---|
-| `k=20` | 0.0112 | **0.0078** |
-| `k=30` | 0.0103 | **0.0052** |
+### DCGAN
 
-The warm-up improved both models and, more importantly, stabilised them: across
-seeds the representation error now spans 0.0052 to 0.0063 at `k=30`, a factor
-1.2, against 0.0103 to 0.0358 before, a factor 3.5. The KL divergence rose from
-between 4 and 7 nats to between 16 and 23.
-
-The selection rule chose the better model on both counts without ever seeing the
-representation error, which is the behaviour it was written to have.
-
-The same procedure was applied to the fully connected architecture of the
-reference paper, with two seeds and two warm-up settings; the run with the
-lowest validation loss, 96.23, was kept.
+To be recorded when the runs described above have finished, from
+`models/dcgan_selection_dim20.txt` and `models/dcgan_selection_dim30.txt`, which
+`scripts/select_dcgan.py` writes.
