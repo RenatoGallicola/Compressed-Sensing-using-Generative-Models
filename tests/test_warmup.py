@@ -76,11 +76,17 @@ def test_evaluation_ignores_the_warm_up_weight(vae):
     full = evaluate(1.0)
     zeroed = evaluate(0.0)
 
-    assert zeroed["loss"] == pytest.approx(full["loss"], rel=1e-6)
-    assert zeroed["kl_loss"] == pytest.approx(full["kl_loss"], rel=1e-6)
     # Guard against the test passing because the KL term is negligible: a leak
     # of the weight into evaluation would have to be visible.
-    assert full["kl_loss"] > 1e-2 * full["loss"]
+    assert full["kl_loss"] > 1e-2 * full["loss"], "the KL term is too small to detect a leak"
+
+    # A leak would drop the reported loss by the whole KL term, so the tolerance
+    # is a fraction of that term rather than float precision. Reseeding does not
+    # reproduce the same z on every TensorFlow build, and the resulting
+    # difference is two orders of magnitude below the effect being tested.
+    assert abs(zeroed["loss"] - full["loss"]) < 1e-2 * full["kl_loss"]
+    # The divergence itself is computed from the encoder means, with no sampling.
+    assert zeroed["kl_loss"] == pytest.approx(full["kl_loss"], rel=1e-3)
 
 
 def test_reported_loss_is_the_sum_of_its_parts(vae):
