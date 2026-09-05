@@ -28,6 +28,14 @@ LATENT_DIMS: tuple[int, ...] = (20, 30)
 #: Default seed, used everywhere a stream of randomness must be reproducible.
 DEFAULT_SEED: int = 1337
 
+#: Offset separating the noise stream from the measurement-matrix stream.
+#: Both are drawn with ``default_rng(base + m)`` from the same kind of standard
+#: normal, so without an offset the noise vector is the first ``m`` entries of
+#: ``A`` rescaled, and the two are perfectly correlated rather than independent.
+#: Every recovery guarantee in Bora et al. assumes ``eta`` is independent of
+#: ``A``, so the streams are kept apart by construction.
+NOISE_SEED_OFFSET: int = 1_000_000
+
 
 def checkpoint_path(model: str, latent_dim: int) -> Path:
     """Return the path of a shipped checkpoint.

@@ -17,7 +17,9 @@ Example:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import subprocess
 import time
 from pathlib import Path
 
@@ -25,7 +27,14 @@ import numpy as np
 import pandas as pd
 
 from csgm.baselines import lasso_recover
-from csgm.config import DEFAULT_SEED, N_PIXELS, RESULTS_DIR
+from csgm.config import (
+    DEFAULT_SEED,
+    N_PIXELS,
+    NOISE_SEED_OFFSET,
+    RESULTS_DIR,
+    ROOT_DIR,
+    checkpoint_path,
+)
 from csgm.data import load_mnist, sample_images
 from csgm.measurements import gaussian_measurement_matrix, measure
 from csgm.metrics import per_pixel_l2, psnr
@@ -102,6 +111,36 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def git_revision() -> str:
+    """Return the short revision this run was produced at, or ``"unknown"``."""
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
+
+
+def fingerprint(method: str) -> str:
+    """Return a short hash of the checkpoint a method recovers with.
+
+    Two runs can agree on every command-line setting and still be built on
+    different generators, which is exactly what merging must not silently pool.
+    Baselines have no checkpoint and are identified by their basis instead.
+    """
+    family, latent_dim = parse_method(method)
+    if family.startswith("lasso"):
+        return family
+    path = checkpoint_path(family, latent_dim)
+    if not path.exists():
+        return "missing"
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+
+
 def protocol(args) -> dict:
     """The settings that have to match for two runs to be poolable."""
     return {
@@ -113,6 +152,9 @@ def protocol(args) -> dict:
         "noise_norm": args.noise_norm,
         "noise_std": args.noise_std,
         "lasso_alpha": args.lasso_alpha if args.lasso_alpha is not None else "per budget",
+        # The resolved table, not just the word "per budget": two runs against
+        # different tuning outputs would otherwise look identical here.
+        "lasso_alpha_table": args.resolved_alpha,
         "seed": args.seed,
         "m_values": sorted(args.m_values),
     }
@@ -168,6 +210,11 @@ def main() -> None:
             )
         tuned_alpha = json.loads(source.read_text(encoding="utf-8"))
         print(f"using the per-budget shrinkage from {source}")
+    args.resolved_alpha = tuned_alpha or None
+
+    revision = git_revision()
+    fingerprints = {method: fingerprint(method) for method in args.methods}
+    print("checkpoints: " + ", ".join(f"{k}={v}" for k, v in fingerprints.items()))
 
     rows: list[dict] = []
     reconstructions: dict[str, np.ndarray] = {"ground_truth": images}
@@ -179,7 +226,9 @@ def main() -> None:
         # A fixed per-component sigma would make the total noise grow as sqrt(m);
         # scaling by 1/sqrt(m) keeps ||eta|| constant, so budgets stay comparable.
         noise_std = args.noise_std if args.noise_std is not None else args.noise_norm / np.sqrt(m)
-        y = measure(images, A, noise_std=noise_std, seed=args.seed + m)
+        # The offset matters: drawing the noise from the same seed as A makes it
+        # a rescaled copy of A's first rows rather than an independent draw.
+        y = measure(images, A, noise_std=noise_std, seed=args.seed + m + NOISE_SEED_OFFSET)
 
         for method in args.methods:
             family, latent_dim = parse_method(method)
@@ -225,6 +274,8 @@ def main() -> None:
                         "psnr_db": float(psnr(x_hat[i], images[i])[0]),
                         "measurement_residual": float(res),
                         "seconds_per_batch": elapsed,
+                        "checkpoint": fingerprints[method],
+                        "revision": revision,
                     }
                 )
             print(
@@ -239,6 +290,11 @@ def main() -> None:
     table = pd.DataFrame(rows)
 
     if args.merge and csv_path.exists():
+        if not meta_path.exists():
+            raise SystemExit(
+                f"refusing to merge, {csv_path.name} has no {meta_path.name} beside it, "
+                "so there is nothing to check the protocol against"
+            )
         recorded = json.loads(meta_path.read_text(encoding="utf-8"))["protocol"]
         current = protocol(args)
         differing = {k: (recorded.get(k), v) for k, v in current.items() if recorded.get(k) != v}
@@ -246,6 +302,15 @@ def main() -> None:
             raise SystemExit(f"refusing to merge, the protocol differs: {differing}")
 
         previous = pd.read_csv(csv_path)
+        if "checkpoint" in previous.columns:
+            kept = previous[~previous["method"].isin(args.methods)]
+            stale = {
+                method: sorted(set(group["checkpoint"]))
+                for method, group in kept.groupby("method")
+                if method in fingerprints and fingerprints[method] not in set(group["checkpoint"])
+            }
+            if stale:
+                print(f"note: rows kept from an earlier build of {sorted(stale)}")
         table = pd.concat([previous[~previous["method"].isin(args.methods)], table])
         table = table.sort_values(["method", "m", "image"]).reset_index(drop=True)
 
@@ -258,7 +323,15 @@ def main() -> None:
     table.to_csv(csv_path, index=False)
     np.savez_compressed(npz_path, **reconstructions)
     meta_path.write_text(
-        json.dumps({"protocol": protocol(args), "methods": sorted(set(table["method"]))}, indent=2),
+        json.dumps(
+            {
+                "protocol": protocol(args),
+                "methods": sorted(set(table["method"])),
+                "git_revision": revision,
+                "checkpoints": fingerprints,
+            },
+            indent=2,
+        ),
         encoding="utf-8",
     )
     print(f"\nwrote {csv_path}\nwrote {npz_path}\nwrote {meta_path}")

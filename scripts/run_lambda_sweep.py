@@ -22,7 +22,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from csgm.config import DEFAULT_SEED, N_PIXELS, RESULTS_DIR
+from csgm.config import DEFAULT_SEED, N_PIXELS, NOISE_SEED_OFFSET, RESULTS_DIR
 from csgm.data import load_mnist, sample_images
 from csgm.measurements import gaussian_measurement_matrix, measure
 from csgm.metrics import per_pixel_l2
@@ -44,6 +44,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=0.01)
     parser.add_argument("--noise-norm", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument(
+        "--sweep-seed",
+        type=int,
+        default=DEFAULT_SEED + 2,
+        help=(
+            "seed for the whole sweep draw: images, measurement matrices and noise. "
+            "Kept different from the benchmark's so that the penalty is not chosen "
+            "on the images the benchmark reports"
+        ),
+    )
     parser.add_argument("--output-dir", type=Path, default=RESULTS_DIR)
     return parser.parse_args()
 
@@ -56,7 +66,7 @@ def main() -> None:
 
     (_, _), (x_test, y_test) = load_mnist()
     images = sample_images(
-        x_test, args.n_images, labels=y_test, stratified=True, seed=args.seed
+        x_test, args.n_images, labels=y_test, stratified=True, seed=args.sweep_seed
     ).reshape(args.n_images, N_PIXELS)
 
     generators = {}
@@ -68,8 +78,13 @@ def main() -> None:
     for m in args.m_values:
         # Same derivation as run_benchmark.py, so the lambda = 0 column is
         # directly comparable with the main benchmark.
-        A = gaussian_measurement_matrix(m, N_PIXELS, seed=args.seed + m)
-        y = measure(images, A, noise_std=args.noise_norm / np.sqrt(m), seed=args.seed + m)
+        A = gaussian_measurement_matrix(m, N_PIXELS, seed=args.sweep_seed + m)
+        y = measure(
+            images,
+            A,
+            noise_std=args.noise_norm / np.sqrt(m),
+            seed=args.sweep_seed + m + NOISE_SEED_OFFSET,
+        )
 
         for method, (generator, latent_dim) in generators.items():
             for penalty in args.lambdas:

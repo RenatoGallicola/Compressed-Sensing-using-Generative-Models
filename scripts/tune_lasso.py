@@ -11,10 +11,12 @@ the point: a comparison that only holds against a badly configured baseline is
 worth nothing. A single global value would have been convenient but costs the
 baseline up to a factor of two at some budgets.
 
-The sweep runs on ten images drawn with a different seed from the ones the
-benchmark scores on, so the baseline's hyper-parameter is not chosen on the
-evaluation set. The result is written to ``lasso_alpha.json``, which
-``run_benchmark.py`` reads.
+The sweep runs on its own draw: ten images the benchmark never scores, and its
+own measurement matrices and noise. Tuning under the very matrix and noise
+realisation the baseline is then evaluated under would select a shrinkage that
+suits that particular draw, which is the same kind of leak as tuning on the
+evaluation images, only milder. The result is written to ``lasso_alpha.json``,
+which ``run_benchmark.py`` reads.
 
 Example:
     python scripts/tune_lasso.py
@@ -30,7 +32,7 @@ import numpy as np
 import pandas as pd
 
 from csgm.baselines import lasso_recover
-from csgm.config import DEFAULT_SEED, N_PIXELS, RESULTS_DIR
+from csgm.config import DEFAULT_SEED, N_PIXELS, NOISE_SEED_OFFSET, RESULTS_DIR
 from csgm.data import load_mnist, sample_images
 from csgm.measurements import gaussian_measurement_matrix, measure
 from csgm.metrics import per_pixel_l2
@@ -52,7 +54,10 @@ def parse_args() -> argparse.Namespace:
         "--tuning-seed",
         type=int,
         default=DEFAULT_SEED + 1,
-        help="seed for the images used to tune, kept different from the benchmark's",
+        help=(
+            "seed for the whole tuning draw: images, measurement matrices and noise. "
+            "Kept different from the benchmark's"
+        ),
     )
     parser.add_argument("--output-dir", type=Path, default=RESULTS_DIR)
     return parser.parse_args()
@@ -66,12 +71,32 @@ def main() -> None:
     images = sample_images(
         x_test, args.n_images, labels=y_test, stratified=True, seed=args.tuning_seed
     ).reshape(args.n_images, N_PIXELS)
-    print(f"tuning on images drawn with seed {args.tuning_seed}, benchmark uses {args.seed}")
+
+    # Disjointness is the whole point of the separate seed, so it is checked
+    # rather than assumed: a stratified draw could in principle repeat an image.
+    scored = sample_images(
+        x_test, args.n_images, labels=y_test, stratified=True, seed=args.seed
+    ).reshape(args.n_images, N_PIXELS)
+    shared = sum(any(np.array_equal(a, b) for b in scored) for a in images)
+    if shared:
+        raise SystemExit(
+            f"{shared} of the {args.n_images} tuning images are also scored by the "
+            f"benchmark; pick a --tuning-seed other than {args.tuning_seed}"
+        )
+    print(
+        f"tuning on {args.n_images} images drawn with seed {args.tuning_seed}, "
+        f"disjoint from the {args.n_images} the benchmark scores with seed {args.seed}"
+    )
 
     rows = []
     for m in args.m_values:
-        A = gaussian_measurement_matrix(m, N_PIXELS, seed=args.seed + m)
-        y = measure(images, A, noise_std=args.noise_norm / np.sqrt(m), seed=args.seed + m)
+        A = gaussian_measurement_matrix(m, N_PIXELS, seed=args.tuning_seed + m)
+        y = measure(
+            images,
+            A,
+            noise_std=args.noise_norm / np.sqrt(m),
+            seed=args.tuning_seed + m + NOISE_SEED_OFFSET,
+        )
         for basis in args.bases:
             for alpha in args.alphas:
                 x_hat = lasso_recover(y, A, basis=basis, alpha=alpha)
