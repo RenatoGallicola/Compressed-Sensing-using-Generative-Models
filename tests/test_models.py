@@ -10,11 +10,13 @@ from csgm.config import IMAGE_SHAPE, checkpoint_path
 from csgm.models import (
     DCGAN,
     VAE,
+    GeneratorCheckpoints,
     build_decoder,
     build_discriminator,
     build_encoder,
     build_generator,
     load_generator,
+    smooth_labels,
 )
 
 LATENT_DIM = 8
@@ -126,3 +128,61 @@ def test_paper_architecture_has_its_own_checkpoint_name():
     paper = checkpoint_path("fcvae", 20).name
     assert conv != paper
     assert "fc" in paper
+
+
+def test_dcgan_runs_two_generator_updates_per_discriminator_update():
+    """Bora et al. sec. 5.2 update G twice per cycle; the count must be honoured."""
+    import keras
+
+    gan = DCGAN(build_discriminator(), build_generator(LATENT_DIM), LATENT_DIM)
+    gan.compile(
+        d_optimizer=keras.optimizers.Adam(),
+        g_optimizer=keras.optimizers.Adam(),
+        loss_fn=keras.losses.BinaryCrossentropy(),
+    )
+    images = np.random.default_rng(0).random((4, *IMAGE_SHAPE)).astype("float32")
+    gan.fit(images, epochs=1, batch_size=4, verbose=0)
+
+    assert int(gan.d_optimizer.iterations) == 1
+    assert int(gan.g_optimizer.iterations) == 2
+
+
+def test_smoothed_labels_stay_inside_the_unit_interval():
+    """Adding noise to both classes alike pushed the positive targets past 1."""
+    labels = np.concatenate([np.ones((64, 1)), np.zeros((64, 1))]).astype("float32")
+    smoothed = np.asarray(smooth_labels(keras.ops.convert_to_tensor(labels)))
+
+    assert smoothed.min() >= 0.0
+    assert smoothed.max() <= 1.0
+    # Both classes have to move, otherwise the trick does nothing on one side.
+    positives, negatives = smoothed[:64], smoothed[64:]
+    assert positives.min() < 1.0 and positives.max() <= 1.0
+    assert negatives.max() > 0.0 and negatives.min() >= 0.0
+    # And each stays on its own side of the boundary.
+    assert positives.min() > 0.5 > negatives.max()
+
+
+def test_generator_checkpoints_follow_the_schedule(tmp_path):
+    """Only the scheduled epochs are written, so selection has a fixed grid."""
+    import keras
+
+    gan = DCGAN(build_discriminator(), build_generator(LATENT_DIM), LATENT_DIM)
+    gan.compile(
+        d_optimizer=keras.optimizers.Adam(),
+        g_optimizer=keras.optimizers.Adam(),
+        loss_fn=keras.losses.BinaryCrossentropy(),
+    )
+    images = np.random.default_rng(0).random((4, *IMAGE_SHAPE)).astype("float32")
+    gan.fit(
+        images,
+        epochs=6,
+        batch_size=4,
+        verbose=0,
+        callbacks=[GeneratorCheckpoints(tmp_path, LATENT_DIM, every=2, start=4)],
+    )
+
+    written = sorted(p.name for p in tmp_path.glob("*.keras"))
+    assert written == [
+        f"gan_gen_dim{LATENT_DIM}_epoch004.keras",
+        f"gan_gen_dim{LATENT_DIM}_epoch006.keras",
+    ]

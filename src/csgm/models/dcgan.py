@@ -75,23 +75,52 @@ def build_generator(latent_dim: int) -> keras.Model:
     )
 
 
+def smooth_labels(labels: tf.Tensor, strength: float = 0.05) -> tf.Tensor:
+    """Move binary targets towards each other by a random amount.
+
+    Smoothing keeps the discriminator from saturating early and starving the
+    generator of gradient. It has to move each class towards the interior:
+    adding the same positive noise to both, as the widely copied Keras example
+    does, sends the positive targets to 1.05, which puts a negative weight on
+    ``log(1 - p)`` in the cross-entropy and rewards overshooting instead.
+
+    Args:
+        labels: Targets in ``{0, 1}`` of any shape.
+        strength: Largest displacement applied to a target.
+
+    Returns:
+        Targets in ``[0, 1]``, of the same shape.
+    """
+    noise = strength * tf.random.uniform(tf.shape(labels))
+    return labels + noise * (1.0 - 2.0 * labels)
+
+
 @keras.saving.register_keras_serializable(package="csgm")
 class DCGAN(keras.Model):
     """The adversarial game between ``G`` and ``D``.
 
     Each step updates ``D`` on a half-real/half-fake batch, then updates ``G``
-    against the (frozen) updated ``D``. Discriminator labels are perturbed with
-    a little uniform noise, a standard trick that keeps ``D`` from saturating
-    early and starving ``G`` of gradient.
+    against the (frozen) updated ``D``. Bora et al. run two generator updates
+    per discriminator update, which is the default here: the discriminator wins
+    the game easily on MNIST, and starving the generator of gradient is the
+    usual way a DCGAN fails to train. Discriminator labels are perturbed with a
+    little uniform noise, a standard trick that keeps ``D`` from saturating
+    early.
     """
 
     def __init__(
-        self, discriminator: keras.Model, generator: keras.Model, latent_dim: int, **kwargs
+        self,
+        discriminator: keras.Model,
+        generator: keras.Model,
+        latent_dim: int,
+        generator_updates: int = 2,
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.discriminator = discriminator
         self.generator = generator
         self.latent_dim = latent_dim
+        self.generator_updates = generator_updates
         self.d_loss_metric = keras.metrics.Mean(name="d_loss")
         self.g_loss_metric = keras.metrics.Mean(name="g_loss")
 
@@ -112,7 +141,7 @@ class DCGAN(keras.Model):
         return self.generator(inputs, training=training)
 
     def train_step(self, real_images: tf.Tensor) -> dict:
-        """Run one discriminator update followed by one generator update."""
+        """Run one discriminator update followed by ``generator_updates`` of ``G``."""
         if isinstance(real_images, tuple):
             real_images = real_images[0]
         batch_size = tf.shape(real_images)[0]
@@ -122,7 +151,7 @@ class DCGAN(keras.Model):
         generated = self.generator(tf.random.normal((batch_size, self.latent_dim)))
         combined = tf.concat([generated, real_images], axis=0)
         labels = tf.concat([tf.ones((batch_size, 1)), tf.zeros((batch_size, 1))], axis=0)
-        labels += 0.05 * tf.random.uniform(tf.shape(labels))
+        labels = smooth_labels(labels)
 
         with tf.GradientTape() as tape:
             d_loss = self.loss_fn(labels, self.discriminator(combined))
@@ -133,15 +162,49 @@ class DCGAN(keras.Model):
 
         # Generator: push D towards calling its samples real.
         misleading = tf.zeros((batch_size, 1))
-        with tf.GradientTape() as tape:
-            fakes = self.generator(tf.random.normal((batch_size, self.latent_dim)))
-            g_loss = self.loss_fn(misleading, self.discriminator(fakes))
-        grads = tape.gradient(g_loss, self.generator.trainable_weights)
-        self.g_optimizer.apply_gradients(zip(grads, self.generator.trainable_weights, strict=True))
+        for _ in range(self.generator_updates):
+            with tf.GradientTape() as tape:
+                fakes = self.generator(tf.random.normal((batch_size, self.latent_dim)))
+                g_loss = self.loss_fn(misleading, self.discriminator(fakes))
+            grads = tape.gradient(g_loss, self.generator.trainable_weights)
+            self.g_optimizer.apply_gradients(
+                zip(grads, self.generator.trainable_weights, strict=True)
+            )
 
         self.d_loss_metric.update_state(d_loss)
         self.g_loss_metric.update_state(g_loss)
         return {m.name: m.result() for m in self.metrics}
+
+
+class GeneratorCheckpoints(keras.callbacks.Callback):
+    """Save the generator every few epochs so it can be selected afterwards.
+
+    A GAN has no validation loss, so there is no signal telling training when to
+    stop, and sample quality oscillates from epoch to epoch. Keeping whatever
+    the final epoch produced is a choice made by the schedule rather than by any
+    criterion. Saving intermediate generators costs nothing during training and
+    lets ``scripts/select_dcgan.py`` pick one on held-out data afterwards.
+    """
+
+    def __init__(self, output_dir: str | Path, latent_dim: int, every: int = 5, start: int = 20):
+        super().__init__()
+        self.output_dir = Path(output_dir)
+        self.latent_dim = latent_dim
+        self.every = every
+        self.start = start
+
+    def on_train_begin(self, logs: dict | None = None) -> None:
+        """Create the output directory."""
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
+    def on_epoch_end(self, epoch: int, logs: dict | None = None) -> None:
+        """Write the generator if this epoch is on the schedule."""
+        done = epoch + 1
+        if done < self.start or done % self.every:
+            return
+        path = self.output_dir / f"gan_gen_dim{self.latent_dim}_epoch{done:03d}.keras"
+        self.model.generator.save(path)
+        print(f"  checkpoint {path.name}")
 
 
 class GANMonitor(keras.callbacks.Callback):
