@@ -1,7 +1,9 @@
 """Train the DCGAN on MNIST and save its generator.
 
-Train and test splits are concatenated: the GAN is a density model, it is never
-evaluated on held-out labels, so all 70k digits are useful training signal.
+Only the training split is used. The recovery benchmark is scored on images
+from the test split, and Bora et al. require the generator to have been trained
+without seeing them, so folding the test images in would leak the evaluation set
+into the prior.
 
 Example:
     python scripts/train_dcgan.py --latent-dim 20 --epochs 50
@@ -34,6 +36,15 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help="global random seed")
     parser.add_argument(
+        "--include-test-split",
+        action="store_true",
+        help=(
+            "also train on the test images, as the original run of this project did. "
+            "It leaks the evaluation set into the prior and is kept only to reproduce "
+            "the shipped checkpoints"
+        ),
+    )
+    parser.add_argument(
         "--sample-dir",
         type=Path,
         default=None,
@@ -56,7 +67,7 @@ def main() -> None:
     keras.utils.set_random_seed(args.seed)
 
     (x_train, _), (x_test, _) = load_mnist()
-    dataset = np.concatenate([x_train, x_test])
+    dataset = np.concatenate([x_train, x_test]) if args.include_test_split else x_train
     print(f"training on {len(dataset)} images")
 
     discriminator = build_discriminator()

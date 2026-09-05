@@ -7,10 +7,12 @@ in some fixed basis. Writing ``x = Psi theta``, the measurements become
     theta_hat = argmin_theta  ||A Psi theta - y||^2 + alpha ||theta||_1 ,
     x_hat     = Psi theta_hat.
 
-Two choices of ``Psi`` are provided. ``"pixel"`` takes ``Psi = I``, which is
+Three choices of ``Psi`` are provided. ``"pixel"`` takes ``Psi = I``, which is
 what Bora et al. use on MNIST: digits are mostly background, so they are already
-sparse in pixel space. ``"dct"`` takes the orthonormal DCT, which the same
-authors use on celebA and which is the usual choice for natural images.
+sparse in pixel space. ``"dct"`` takes the separable two dimensional DCT, which
+the same authors apply to natural images and which is the transform image codecs
+use. ``"dct1"`` is a one dimensional DCT over the raster-scanned vector, kept for
+one dimensional signals; on images it is a substantially weaker basis.
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ from sklearn.linear_model import Lasso
 
 @lru_cache(maxsize=4)
 def dct_basis(n: int) -> np.ndarray:
-    """Return the orthonormal DCT-II synthesis basis ``Psi`` of size ``n``.
+    """Return the one dimensional orthonormal DCT-II synthesis basis of size ``n``.
 
     ``Psi`` maps coefficients to the signal domain (``x = Psi theta``) and is
     orthogonal, so the analysis operator is simply ``Psi.T``. Cached because it
@@ -39,12 +41,33 @@ def dct_basis(n: int) -> np.ndarray:
     return idct(np.eye(n), norm="ortho", axis=0)
 
 
+@lru_cache(maxsize=4)
+def dct2_basis(side: int) -> np.ndarray:
+    """Return the separable two dimensional DCT basis for ``side x side`` images.
+
+    Applying a one dimensional DCT to a raster-scanned image is not the same
+    transform: it treats the end of one row as adjacent to the start of the
+    next, and compresses images far worse. Image codecs, and the reference
+    paper, use the two dimensional transform, which is separable, so the basis
+    for vectorised images is the Kronecker product of the one dimensional one
+    with itself.
+
+    Args:
+        side: Image side length; the basis acts on ``side * side`` vectors.
+
+    Returns:
+        Array of shape ``(side * side, side * side)``.
+    """
+    one_d = dct_basis(side)
+    return np.kron(one_d, one_d)
+
+
 def lasso_recover(
     y: np.ndarray,
     A: np.ndarray,
     *,
     basis: str = "pixel",
-    alpha: float = 1e-4,
+    alpha: float = 1e-5,
     max_iter: int = 10_000,
     clip: bool = True,
 ) -> np.ndarray:
@@ -54,7 +77,11 @@ def lasso_recover(
         y: Measurements of shape ``(m,)`` or ``(batch, m)``.
         A: Measurement matrix of shape ``(m, n)``.
         basis: ``"pixel"`` for sparsity in pixel space, which is what Bora et al.
-            use on MNIST, or ``"dct"`` for the orthonormal DCT basis.
+            use on MNIST; ``"dct"`` for the separable two dimensional DCT, the
+            transform image codecs use and the one the same authors apply to
+            natural images; ``"dct1"`` for a one dimensional DCT over the
+            raster-scanned vector, which is a much weaker basis for images and
+            is kept only for one dimensional signals.
         alpha: L1 regularisation strength passed to :class:`sklearn.linear_model.Lasso`.
             Its objective is scaled by ``1 / (2 * m)``, so this is not on the same
             scale as the shrinkage parameter quoted in the paper; the value used
@@ -75,10 +102,19 @@ def lasso_recover(
     A = np.asarray(A, dtype=np.float64)
     if y.shape[1] != A.shape[0]:
         raise ValueError(f"y has {y.shape[1]} measurements but A has {A.shape[0]} rows")
-    if basis not in {"pixel", "dct"}:
-        raise ValueError(f"unknown basis {basis!r}, expected 'pixel' or 'dct'")
+    if basis not in {"pixel", "dct", "dct1"}:
+        raise ValueError(f"unknown basis {basis!r}, expected 'pixel', 'dct' or 'dct1'")
 
-    psi = None if basis == "pixel" else dct_basis(A.shape[1])
+    n = A.shape[1]
+    if basis == "pixel":
+        psi = None
+    elif basis == "dct1":
+        psi = dct_basis(n)
+    else:
+        side = round(n**0.5)
+        if side * side != n:
+            raise ValueError(f"the 2D DCT needs a square image, got n={n}")
+        psi = dct2_basis(side)
     design = A if psi is None else A @ psi
 
     # Lasso supports multi-target fits, so the whole batch is solved at once.

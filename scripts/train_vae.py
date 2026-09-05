@@ -35,6 +35,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=1e-3, help="Adam learning rate")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help="global random seed")
     parser.add_argument(
+        "--validation-fraction",
+        type=float,
+        default=0.1,
+        help="fraction of the training split held out for early stopping and model choice",
+    )
+    parser.add_argument(
         "--kl-warmup-epochs",
         type=int,
         default=10,
@@ -72,8 +78,13 @@ def main() -> None:
 
     keras.utils.set_random_seed(args.seed)
 
-    (x_train, _), (x_test, _) = load_mnist()
-    print(f"train {x_train.shape} | test {x_test.shape}")
+    (x_train, _), _ = load_mnist()
+    # The test split is what the recovery benchmark is scored on, so it must not
+    # influence training at all, not through early stopping and not through the
+    # choice of checkpoint. Validation is carved out of the training split.
+    split = int(len(x_train) * (1 - args.validation_fraction))
+    x_fit, x_val = x_train[:split], x_train[split:]
+    print(f"fit {x_fit.shape} | validation {x_val.shape} | test split untouched")
 
     if args.architecture == "fc":
         encoder = build_fc_encoder(args.latent_dim)
@@ -96,10 +107,10 @@ def main() -> None:
         )
 
     vae.fit(
-        x_train,
+        x_fit,
         epochs=args.epochs,
         batch_size=args.batch_size,
-        validation_data=(x_test,),
+        validation_data=(x_val,),
         callbacks=callbacks,
     )
 

@@ -118,6 +118,15 @@ def _optimise(generator, z, y_rep, A_t, config: RecoveryConfig, n: int, history:
             history.append(float(tf.reduce_mean(objective)))
         if config.log_every and i % config.log_every == 0:
             print(f"  step {i:>5} | mean objective {float(tf.reduce_mean(objective)):.5f}")
+
+    # The values above were measured before the final update, so they belong to
+    # a latent code that is no longer the one being returned. Restarts are ranked
+    # on this, so it is measured again on the codes that survive.
+    generated = tf.reshape(generator(z, training=False), (items, n))
+    measurement = tf.reduce_sum((generated @ A_t - y_rep) ** 2, axis=1)
+    objective = measurement
+    if config.l2_penalty:
+        objective = measurement + config.l2_penalty * tf.reduce_sum(z**2, axis=1)
     return np.asarray(measurement), np.asarray(objective)
 
 

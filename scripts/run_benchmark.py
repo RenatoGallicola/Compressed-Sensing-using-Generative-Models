@@ -76,8 +76,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--lasso-alpha",
         type=float,
-        default=1e-5,
-        help="Lasso L1 strength, chosen by scripts/tune_lasso.py for both bases",
+        default=None,
+        help=(
+            "fixed Lasso L1 strength. By default the per-budget values chosen by "
+            "scripts/tune_lasso.py are read from results/lasso_alpha.json, which gives "
+            "the baseline its best configuration at every budget"
+        ),
     )
     parser.add_argument(
         "--image-batch-size", type=int, default=10, help="images optimised in one pass"
@@ -108,7 +112,7 @@ def protocol(args) -> dict:
         "l2_penalty": args.l2_penalty,
         "noise_norm": args.noise_norm,
         "noise_std": args.noise_std,
-        "lasso_alpha": args.lasso_alpha,
+        "lasso_alpha": args.lasso_alpha if args.lasso_alpha is not None else "per budget",
         "seed": args.seed,
         "m_values": sorted(args.m_values),
     }
@@ -153,6 +157,18 @@ def main() -> None:
         if not method.startswith("lasso")
     }
 
+    alpha_path = args.output_dir / "lasso_alpha.json"
+    tuned_alpha = {}
+    if args.lasso_alpha is None:
+        source = alpha_path if alpha_path.exists() else RESULTS_DIR / "lasso_alpha.json"
+        if not source.exists():
+            raise SystemExit(
+                f"no shrinkage table at {source}; run scripts/tune_lasso.py first "
+                "or pass --lasso-alpha"
+            )
+        tuned_alpha = json.loads(source.read_text(encoding="utf-8"))
+        print(f"using the per-budget shrinkage from {source}")
+
     rows: list[dict] = []
     reconstructions: dict[str, np.ndarray] = {"ground_truth": images}
 
@@ -171,7 +187,10 @@ def main() -> None:
 
             if family.startswith("lasso"):
                 basis = "dct" if family == "lasso-dct" else "pixel"
-                x_hat = lasso_recover(y, A, basis=basis, alpha=args.lasso_alpha)
+                alpha = (
+                    args.lasso_alpha if args.lasso_alpha is not None else tuned_alpha[basis][str(m)]
+                )
+                x_hat = lasso_recover(y, A, basis=basis, alpha=alpha)
                 residual = np.linalg.norm(x_hat @ A.T - y, axis=1)
             else:
                 result = recover(

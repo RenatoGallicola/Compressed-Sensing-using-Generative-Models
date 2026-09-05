@@ -5,10 +5,16 @@ badly tuned baseline says nothing. Bora et al. quote a shrinkage of 0.1, but
 scikit-learn scales its objective by ``1 / (2 m)``, so that number does not
 transfer, and the value is swept here instead.
 
-Selection is on the mean error over the measurement budgets, per basis, and the
-chosen value is then used for every budget. Tuning per budget would give the
-baseline an advantage the generative priors do not get, since those use one
-setting throughout.
+The shrinkage is chosen separately for each basis and each measurement budget.
+That is the most favourable configuration the baseline can be given, which is
+the point: a comparison that only holds against a badly configured baseline is
+worth nothing. A single global value would have been convenient but costs the
+baseline up to a factor of two at some budgets.
+
+The sweep runs on ten images drawn with a different seed from the ones the
+benchmark scores on, so the baseline's hyper-parameter is not chosen on the
+evaluation set. The result is written to ``lasso_alpha.json``, which
+``run_benchmark.py`` reads.
 
 Example:
     python scripts/tune_lasso.py
@@ -17,6 +23,7 @@ Example:
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import numpy as np
@@ -28,7 +35,7 @@ from csgm.data import load_mnist, sample_images
 from csgm.measurements import gaussian_measurement_matrix, measure
 from csgm.metrics import per_pixel_l2
 
-DEFAULT_ALPHAS = (1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1)
+DEFAULT_ALPHAS = (1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1)
 DEFAULT_M_VALUES = (10, 25, 50, 75, 100, 200, 300, 400, 500, 750)
 
 
@@ -41,6 +48,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n-images", type=int, default=10)
     parser.add_argument("--noise-norm", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument(
+        "--tuning-seed",
+        type=int,
+        default=DEFAULT_SEED + 1,
+        help="seed for the images used to tune, kept different from the benchmark's",
+    )
     parser.add_argument("--output-dir", type=Path, default=RESULTS_DIR)
     return parser.parse_args()
 
@@ -51,8 +64,9 @@ def main() -> None:
 
     (_, _), (x_test, y_test) = load_mnist()
     images = sample_images(
-        x_test, args.n_images, labels=y_test, stratified=True, seed=args.seed
+        x_test, args.n_images, labels=y_test, stratified=True, seed=args.tuning_seed
     ).reshape(args.n_images, N_PIXELS)
+    print(f"tuning on images drawn with seed {args.tuning_seed}, benchmark uses {args.seed}")
 
     rows = []
     for m in args.m_values:
@@ -72,16 +86,19 @@ def main() -> None:
     path = args.output_dir / "lasso_tuning.csv"
     table.to_csv(path, index=False)
 
-    print("\nmean error per basis and shrinkage:")
-    pivot = table.pivot_table(index="alpha", columns="basis", values="error")
-    print(pivot.to_string(float_format=lambda v: f"{v:.5f}"))
-    print()
+    chosen: dict[str, dict[str, float]] = {}
+    print("\nchosen shrinkage per basis and budget:")
     for basis in args.bases:
-        best = pivot[basis].idxmin()
-        print(
-            f"best shrinkage for the {basis} basis: {best:g} (mean error {pivot[basis][best]:.5f})"
-        )
-    print(f"\nwrote {path}")
+        per_budget = {}
+        for m, group in table[table["basis"] == basis].groupby("m"):
+            best = group.loc[group["error"].idxmin()]
+            per_budget[str(int(m))] = float(best["alpha"])
+        chosen[basis] = per_budget
+        print(f"  {basis:<5} " + "  ".join(f"m={m}:{a:g}" for m, a in per_budget.items()))
+
+    alpha_path = args.output_dir / "lasso_alpha.json"
+    alpha_path.write_text(json.dumps(chosen, indent=2) + "\n", encoding="utf-8")
+    print(f"\nwrote {path}\nwrote {alpha_path}")
 
 
 if __name__ == "__main__":
