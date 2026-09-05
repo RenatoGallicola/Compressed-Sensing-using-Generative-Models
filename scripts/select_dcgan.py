@@ -123,21 +123,28 @@ def main() -> None:
     best = min(scores, key=scores.get)
     print(f"\nselected {best.name} at {scores[best]:.5f}")
 
+    if args.dry_run:
+        print("dry run, nothing written and the checkpoint in models/ is unchanged")
+        return
+
+    # The spread across epochs is recorded next to the winner. It is the size of
+    # the effect this rule has, and a reader should be able to see it rather than
+    # be told the rule is harmless.
+    worst, floor = max(scores.values()), min(scores.values())
     report = [
         f"k={args.latent_dim}, selected on representation error over {args.n_images} "
         f"held-out training images ({args.restarts} restarts, {args.steps} steps)",
         "",
-        *(f"  {p.name}: {s:.5f}" for p, s in scores.items()),
+        *(f"  {path.name}: {score:.5f}" for path, score in scores.items()),
         "",
-        f"selected: {best.name}",
+        f"selected: {best.name} at {scores[best]:.5f}",
+        f"spread across the saved epochs: {worst - floor:.5f} ({worst / floor:.2f}x)",
+        f"last epoch, which no rule would have chosen: "
+        f"{checkpoints[-1].name} at {scores[checkpoints[-1]]:.5f}",
     ]
     (MODELS_DIR / f"dcgan_selection_dim{args.latent_dim}.txt").write_text(
         "\n".join(report) + "\n", encoding="utf-8"
     )
-
-    if args.dry_run:
-        print("dry run, the checkpoint in models/ is unchanged")
-        return
 
     destination = checkpoint_path("dcgan", args.latent_dim)
     shutil.copy(best, destination)

@@ -57,7 +57,7 @@ def test_batched_recovery_matches_one_image_at_a_time(linear_generator, rng):
         return recover(linear_generator, y, A, LATENT_DIM, config)
 
     together, apart = run(4), run(1)
-    np.testing.assert_allclose(together.residual, apart.residual, rtol=0.15, atol=1e-3)
+    np.testing.assert_allclose(together.residual, apart.residual, rtol=1e-4, atol=1e-5)
 
 
 def test_more_restarts_never_increase_the_residual(linear_generator, rng):
@@ -117,3 +117,25 @@ def test_residual_excludes_the_latent_penalty(linear_generator, rng):
     # With a penalty that large the full objective is clearly bigger, so the two
     # quantities really are distinguishable here.
     assert (result.residual**2 + 5.0 * np.sum(result.z**2, axis=1) > result.residual**2).all()
+
+
+def test_stacking_more_items_does_not_disturb_the_earlier_ones(linear_generator, rng):
+    """Every (image, restart) pair is optimised in one stacked tensor.
+
+    The per-item losses are summed, so row i of the gradient must depend only on
+    item i. If that ever stopped holding, restarts would quietly interfere with
+    each other and every reported number would be wrong, so it is pinned here:
+    the latents are drawn from one stream in row-major order, hence the first two
+    images get identical initialisations whether or not a third is present, and
+    their solutions must therefore be identical too.
+    """
+    x, _ = _range_signal(linear_generator, rng, batch=3)
+    A = gaussian_measurement_matrix(80, N_PIXELS, seed=13)
+    y = measure(x, A)
+
+    config = RecoveryConfig(steps=200, restarts=3, image_batch_size=8, seed=5)
+    pair = recover(linear_generator, y[:2], A, LATENT_DIM, config)
+    triple = recover(linear_generator, y, A, LATENT_DIM, config)
+
+    np.testing.assert_allclose(triple.x_hat[:2], pair.x_hat, rtol=1e-4, atol=1e-5)
+    np.testing.assert_allclose(triple.z[:2], pair.z, rtol=1e-4, atol=1e-5)
