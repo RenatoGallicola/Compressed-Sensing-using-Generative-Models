@@ -1,1 +1,0 @@
-selected s2_w10 on validation loss 96.23

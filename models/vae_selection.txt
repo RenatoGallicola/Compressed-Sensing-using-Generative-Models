@@ -1,0 +1,13 @@
+Selection of the VAE checkpoints, per docs/model_selection.md rule 2: two seeds
+per configuration, lowest validation loss wins. Validation is a tenth of the
+training split, so the test split the benchmark scores on is never seen during
+training or selection. The KL coefficient is forced to 1 when the validation
+loss is evaluated, so runs on different warm-up schedules stay comparable.
+
+conv_k20: conv_k20_s1, validation loss 96.63
+conv_k30: conv_k30_s1, validation loss 96.25
+fc_k20: fc_k20_s1, validation loss 97.18
+
+All three configurations received the same budget: two seeds, a 10 epoch KL
+warm-up, 100 epochs with early stopping. Losses are comparable across the three
+because the objective and the validation images are the same.
