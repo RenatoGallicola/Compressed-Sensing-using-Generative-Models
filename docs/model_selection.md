@@ -54,3 +54,38 @@ this procedure has produced. It comes from a training run that predates this
 repository and cannot be reproduced by the script here. Selecting it because it
 scores well on the recovery benchmark would be selection on the test measurement,
 which is exactly what rules 3 and 4 exist to prevent.
+
+
+## Outcome
+
+Recorded after the four runs finished. The rules above were not changed.
+
+Validation loss, and the KL divergence at convergence, which measures how much
+the latent code is actually used:
+
+| run | validation loss | KL (nats) |
+|---|---|---|
+| `k=20`, seed 1 | **99.16** | 20.27 |
+| `k=20`, seed 2 | 106.71 | 16.51 |
+| `k=30`, seed 1 | **95.83** | 22.74 |
+| `k=30`, seed 2 | 98.85 | 20.24 |
+
+Rule 2 selects seed 1 for both latent dimensions. Measuring the selected models
+afterwards, on the representation error they were not selected on:
+
+| | without warm-up, best of 3 | with warm-up, selected |
+|---|---|---|
+| `k=20` | 0.0112 | **0.0078** |
+| `k=30` | 0.0103 | **0.0052** |
+
+The warm-up improved both models and, more importantly, stabilised them: across
+seeds the representation error now spans 0.0052 to 0.0063 at `k=30`, a factor
+1.2, against 0.0103 to 0.0358 before, a factor 3.5. The KL divergence rose from
+between 4 and 7 nats to between 16 and 23.
+
+The selection rule chose the better model on both counts without ever seeing the
+representation error, which is the behaviour it was written to have.
+
+The same procedure was applied to the fully connected architecture of the
+reference paper, with two seeds and two warm-up settings; the run with the
+lowest validation loss, 96.23, was kept.

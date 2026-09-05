@@ -5,7 +5,8 @@ Each learned prior matches or beats that level with:
 
 | prior | measurements needed | speed-up |
 |---|---|---|
-| VAE, k=20 | never, in the sweep | n/a |
+| VAE, paper architecture, k=20 | 50 | 8.0x |
+| VAE, k=20 | 75 | 5.3x |
 | VAE, k=30 | 75 | 5.3x |
 | DCGAN, k=20 | 200 | 2.0x |
 | DCGAN, k=30 | never, in the sweep | n/a |

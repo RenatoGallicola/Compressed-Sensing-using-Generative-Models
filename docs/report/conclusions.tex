@@ -1,40 +1,39 @@
 \section{Conclusions}
 \vspace{1cm}
-This project aimed to assess the performance of compressed sensing using two deep learning models, VAE and DCGAN, on the MNIST dataset. The models' efficacy in image reconstruction from highly compressed measurements was evaluated and compared to a traditional method, LASSO with a DCT basis.
+This project assessed the performance of compressed sensing with generative priors on the MNIST dataset, comparing a VAE and a DCGAN of our own design, the fully connected VAE of the reference paper, and LASSO with a DCT basis as a classical baseline.
 \\\\
 \textbf{Key Findings:}
 
 \begin{enumerate}
-    \item \textbf{Generative priors win when measurements are scarce:}
+    \item \textbf{The result of the reference paper is reproduced:}
     \begin{itemize}
-        \item With few measurements both models are far more accurate than LASSO. With 25 measurements the VAE with latent dimension 30 has an error per pixel 4.2 times lower, at a budget where the LASSO reconstruction is not recognizable.
-        \item The VAE with latent dimension 30 reaches with 75 measurements the accuracy that LASSO requires 400 measurements to obtain, a saving of a factor 5.3. This is consistent with the range of 5 to 10 reported in \cite{bora2017}.
+        \item With the architecture of \cite{bora2017}, 50 measurements are enough to reach the accuracy LASSO requires 400 measurements to obtain, a saving of a factor 8. The authors report a saving between 5 and 10, so our reproduction falls inside the interval they publish.
+        \item From 500 measurements onwards LASSO becomes more accurate than every generative prior, which is the reversal the paper describes and places past the same threshold.
     \end{itemize}
-    \item \textbf{The advantage has a ceiling:}
+    \item \textbf{The advantage has a ceiling, and the ceiling is the generator:}
     \begin{itemize}
         \item The accuracy of the generative priors stops improving after roughly 200 measurements, because the reconstruction is constrained to the range of the generator and the distance between a real digit and that range does not depend on the number of measurements.
-        \item From 500 measurements onwards LASSO becomes the most accurate method, and with 750 measurements it is 4.4 times more accurate than the best generative model. The same reversal, and the same threshold of about 500 measurements, is described in \cite{bora2017}.
+        \item That floor ranges from 0.0065 for the best model to 0.0233 for the worst, a factor 3.6 between priors, so the choice of generator matters far more than any refinement of the recovery algorithm in this regime.
     \end{itemize}
-    \item \textbf{The VAE outperformed the DCGAN:}
+    \item \textbf{The simpler architecture wins:}
     \begin{itemize}
-        \item Contrary to what the difference in training cost might suggest, the best model overall is the VAE with latent dimension 30, which is the most accurate of the five methods at seven of the ten budgets we tested.
-        \item The DCGAN produces visually sharper reconstructions, which is expected from an adversarially trained generator, but sharpness and accuracy are not the same thing: a sharp digit of the wrong shape scores worse than a slightly blurred digit of the right one.
+        \item The fully connected network of the reference paper is more accurate than our convolutional VAE at every budget, significantly so from 75 measurements upwards, and it is more than twice as fast to invert.
+        \item The DCGAN is both the least accurate prior and by far the most expensive, about 73 times the cost of the fully connected decoder per reconstruction. On this dataset there is no trade-off to arbitrate: the cheap model is also the good one.
     \end{itemize}
-    \item \textbf{Cost is part of the comparison:}
+    \item \textbf{The training procedure is part of the result:}
     \begin{itemize}
-        \item Recovery with a DCGAN generator is about 38 times slower than with a VAE decoder, and this cost is paid at every reconstruction, since recovery is itself an optimization problem.
-        \item Given that the VAE is also the more accurate of the two, it is the better choice for this dataset on both counts.
+        \item Repeating the same VAE training with different random seeds produced generators whose quality varied by a factor of 3.5, more than any difference between the architectures we set out to compare. The cause was partial posterior collapse.
+        \item Adding a KL warm-up removed the instability and improved every model. Any comparison between priors is only meaningful once it is larger than this variability, which is why the conclusions above are supported by paired tests rather than by single runs.
     \end{itemize}
 \end{enumerate}
 
 \textbf{Future Directions:}
 
-The results suggest several avenues for further research:
 \begin{itemize}
-    \item \textbf{Reducing the representation error:} the ceiling described above is a property of the generator, so the natural way to improve the method in the high measurement regime is to train a more expressive generative model rather than to refine the recovery algorithm.
-    \item \textbf{Regularizing the latent search:} the objective of \cite{bora2017} includes a term \( \lambda \|z\|^2 \) that keeps the solution in the region where the prior places most of its mass. We used \( \lambda = 0 \), and quantifying the effect of that term is a direct extension of this work.
-    \item \textbf{Optimizing measurement matrices:} designing or learning measurement matrices adapted to a specific dataset, keeping in mind that the theoretical guarantee relies on the randomness of \( A \) and would be traded away.
-    \item \textbf{Applications beyond MNIST:} MNIST digits form a simple and low dimensional manifold. Applying the method to more complex datasets would test whether the advantage in the low measurement regime is preserved.
+    \item \textbf{Reducing the representation error:} the ceiling described above is a property of the generator, so the way to improve the method in the high measurement regime is a more expressive generative model rather than a better recovery algorithm.
+    \item \textbf{Understanding why the fully connected model wins:} our convolutional decoder has fewer parameters devoted to the output layer and a stronger spatial inductive bias, and identifying which of the two explains the gap would say something useful about what makes a good prior for this task.
+    \item \textbf{Optimizing measurement matrices:} designing or learning matrices adapted to a specific dataset, keeping in mind that the theoretical guarantee relies on the randomness of \( A \) and would be traded away.
+    \item \textbf{Applications beyond MNIST:} MNIST digits form a simple and low dimensional manifold. Applying the method to more complex datasets would test whether the advantage in the low measurement regime survives.
 \end{itemize}
 \vspace{0.01cm}
 In conclusion, combining a generative prior with compressed sensing is worthwhile exactly when measurements are the scarce resource, which is the situation compressed sensing was designed for. The gain is bounded by how well the generator represents the data, and it is paid for with a reconstruction that is orders of magnitude more expensive than a convex solve. Both facts have to be weighed in applications such as medical imaging, where a single measurement can be slow, costly or harmful to the patient, and where the reconstruction happens once.

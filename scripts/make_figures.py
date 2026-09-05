@@ -163,6 +163,63 @@ def sample_efficiency(df: pd.DataFrame, results_dir: Path, reference_m: int = 40
     return path
 
 
+def regularisation_comparison(results_dir: Path, figures_dir: Path) -> list[Path]:
+    """Overlay the sweep with and without the latent regulariser.
+
+    The reference paper plots both variants of every prior, so this reproduces
+    that comparison: solid lines use the value it recommends, dashed lines drop
+    the term entirely.
+
+    Args:
+        results_dir: Directory holding ``benchmark.csv`` and ``unregularised/``.
+        figures_dir: Output directory.
+
+    Returns:
+        The files written, empty if the unregularised sweep is absent.
+    """
+    import matplotlib.pyplot as plt
+
+    other = results_dir / "unregularised" / "benchmark.csv"
+    if not other.exists():
+        return []
+
+    main = pd.read_csv(results_dir / "benchmark.csv")
+    plain = pd.read_csv(other)
+    methods = [m for m in LABELS if m != "lasso" and m in set(main["method"])]
+
+    fig, ax = plt.subplots(figsize=(8.5, 5.2))
+    colours = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+    for colour, method in zip(colours, methods, strict=False):
+        for frame, style, suffix in ((main, "-", ""), (plain, "--", r", $\lambda=0$")):
+            stats = (
+                frame[frame["method"] == method].groupby("m")["per_pixel_error"].mean().sort_index()
+            )
+            ax.plot(
+                stats.index,
+                stats.to_numpy(),
+                style,
+                color=colour,
+                marker="o",
+                ms=3,
+                label=f"{LABELS[method]}{suffix}",
+            )
+    lasso = main[main["method"] == "lasso"].groupby("m")["per_pixel_error"].mean().sort_index()
+    ax.plot(lasso.index, lasso.to_numpy(), color="black", marker="s", ms=3, label=LABELS["lasso"])
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xticks(sorted(main["m"].unique()))
+    ax.get_xaxis().set_major_formatter(plt.matplotlib.ticker.ScalarFormatter())
+    ax.tick_params(axis="x", labelsize=8)
+    ax.set_xlabel("number of measurements $m$")
+    ax.set_ylabel("reconstruction error per pixel")
+    ax.set_title(r"With and without the latent regulariser ($\lambda = 0.1$ against $\lambda = 0$)")
+    ax.grid(True, which="both", alpha=0.3, linewidth=0.5)
+    ax.legend(frameon=False, fontsize=7, ncol=2)
+    fig.tight_layout()
+    return [save_figure(fig, figures_dir / "regularisation_comparison.png")]
+
+
 def lambda_sweep(results_dir: Path, figures_dir: Path) -> list[Path]:
     """Plot the effect of the latent regulariser, if the sweep has been run.
 
@@ -385,6 +442,7 @@ def main() -> None:
         written.append(samples)
 
     written.extend(lambda_sweep(args.results_dir, args.figures_dir))
+    written.extend(regularisation_comparison(args.results_dir, args.figures_dir))
 
     for path in written:
         print(f"wrote {path}")
