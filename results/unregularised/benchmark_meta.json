@@ -35,6 +35,7 @@
       }
     },
     "seed": 1337,
+    "image_batch_size": 10,
     "m_values": [
       10,
       25,

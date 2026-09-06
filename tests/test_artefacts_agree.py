@@ -152,3 +152,38 @@ def test_the_verdict_column_carries_the_direction():
     assert (better["mean_difference"] > 0).all()
     assert (worse["mean_difference"] < 0).all()
     assert (table[table["verdict"] == "ns"]["p_holm"] >= 0.05).all()
+
+
+def test_the_recorded_protocol_has_every_field_the_merge_check_compares():
+    """A field added to ``protocol()`` after a run would block merging into it.
+
+    ``run_benchmark.py --merge`` refuses when any recorded field differs from the
+    current one, and a field absent from an older record reads as differing.
+    Adding one is therefore enough to lock the committed table against the very
+    merge the retraining plan depends on, with no other test failing.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "run_benchmark", ROOT_DIR / "scripts" / "run_benchmark.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["run_benchmark"] = module
+    spec.loader.exec_module(module)
+
+    argv = sys.argv
+    sys.argv = ["run_benchmark.py"]
+    try:
+        args = module.parse_args()
+    finally:
+        sys.argv = argv
+    args.resolved_alpha = None
+    expected = set(module.protocol(args))
+
+    for name in ("benchmark_meta.json", "unregularised/benchmark_meta.json"):
+        path = RESULTS_DIR / name
+        if not path.exists():
+            continue
+        recorded = set(json.loads(path.read_text(encoding="utf-8"))["protocol"])
+        assert recorded == expected, (
+            f"{name} records {sorted(recorded)}, but protocol() compares "
+            f"{sorted(expected)}; --merge would refuse on {sorted(expected ^ recorded)}"
+        )
