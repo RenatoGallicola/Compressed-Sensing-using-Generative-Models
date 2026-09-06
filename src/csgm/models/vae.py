@@ -1,6 +1,6 @@
 """Convolutional variational auto-encoder for MNIST.
 
-The architecture is the one described in ``docs/NAML_project_report.pdf`` (sec.
+The architecture is the one described in ``docs/report/vae.tex`` (sec.
 3.2): a four-layer convolutional encoder producing the parameters of a diagonal
 Gaussian posterior, and a two-layer transposed-convolutional decoder. Only the
 decoder is needed at recovery time -- it *is* the generator ``G``.

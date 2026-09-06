@@ -171,6 +171,9 @@ def protocol(args) -> dict:
         # different tuning outputs would otherwise look identical here.
         "lasso_alpha_table": args.resolved_alpha,
         "seed": args.seed,
+        # The latents are drawn per image-batch, so this changes every
+        # initialisation and two runs that differ in it cannot be pooled.
+        "image_batch_size": args.image_batch_size,
         "m_values": sorted(args.m_values),
     }
 

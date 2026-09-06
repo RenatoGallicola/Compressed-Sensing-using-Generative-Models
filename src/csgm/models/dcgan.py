@@ -1,6 +1,6 @@
 """Deep convolutional GAN for MNIST.
 
-Architecture follows ``docs/NAML_project_report.pdf`` (sec. 3.1), itself a
+Architecture follows ``docs/report/dcgan.tex`` (sec. 3.1), itself a
 scaled-down version of Radford et al. (2015). Only the generator is needed at
 recovery time; the discriminator is kept so training can be reproduced.
 """

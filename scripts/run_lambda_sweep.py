@@ -69,9 +69,22 @@ def main() -> None:
     from csgm.models import load_generator
 
     (_, _), (x_test, y_test) = load_mnist()
+    scored = sample_images(
+        x_test, args.n_images, labels=y_test, stratified=True, seed=args.seed
+    ).reshape(args.n_images, N_PIXELS)
     images = sample_images(
         x_test, args.n_images, labels=y_test, stratified=True, seed=args.sweep_seed
     ).reshape(args.n_images, N_PIXELS)
+
+    # Three documents state that reading a preferred penalty off this sweep is
+    # not selection on the evaluation set. That rests on the two draws being
+    # disjoint, so it is checked here rather than asserted in prose.
+    shared = sum(any(np.array_equal(a, b) for b in scored) for a in images)
+    if shared:
+        raise SystemExit(
+            f"{shared} of the {args.n_images} swept images are also scored by the "
+            f"benchmark; pick a --sweep-seed other than {args.sweep_seed}"
+        )
 
     generators = {}
     for method in args.methods:
