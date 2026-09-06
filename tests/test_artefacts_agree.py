@@ -28,14 +28,29 @@ from csgm.config import RESULTS_DIR, ROOT_DIR, checkpoint_path
 PRIORS = ["fcvae-20", "vae-20", "vae-30", "dcgan-20", "dcgan-30"]
 
 
-def _load_run_stats():
-    """Import ``scripts/run_stats.py``, which is not part of the package."""
-    path = ROOT_DIR / "scripts" / "run_stats.py"
-    spec = importlib.util.spec_from_file_location("run_stats", path)
+def _load_script(name):
+    """Import a file from ``scripts/``, which is not an importable package."""
+    spec = importlib.util.spec_from_file_location(name, ROOT_DIR / "scripts" / f"{name}.py")
     module = importlib.util.module_from_spec(spec)
-    sys.modules["run_stats"] = module
+    sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _defaults(name):
+    """Return the arguments a script gets when run with no flags."""
+    module = _load_script(name)
+    argv = sys.argv
+    sys.argv = [f"{name}.py"]
+    try:
+        return module.parse_args()
+    finally:
+        sys.argv = argv
+
+
+def _load_run_stats():
+    """Import ``scripts/run_stats.py``, which is not part of the package."""
+    return _load_script("run_stats")
 
 
 @pytest.fixture(scope="module")
@@ -187,3 +202,54 @@ def test_the_recorded_protocol_has_every_field_the_merge_check_compares():
             f"{name} records {sorted(recorded)}, but protocol() compares "
             f"{sorted(expected)}; --merge would refuse on {sorted(expected ^ recorded)}"
         )
+
+
+def test_the_sweep_defaults_produce_the_committed_sweep():
+    """The documented command has to reproduce the table it is documented for.
+
+    A default that drifts from the artefact leaves the reader with a command
+    that silently produces something else. This has happened twice: once with
+    the benchmark's latent penalty, once with the list of priors swept here.
+    """
+    path = RESULTS_DIR / "lambda_sweep.csv"
+    if not path.exists():
+        pytest.skip("lambda_sweep.csv is not present")
+
+    args = _defaults("run_lambda_sweep")
+    committed = sorted(pd.read_csv(path)["method"].unique())
+    assert sorted(args.methods) == committed, (
+        f"run_lambda_sweep.py defaults to {sorted(args.methods)} but "
+        f"lambda_sweep.csv holds {committed}; the documented command would "
+        "overwrite the table with a different set of priors"
+    )
+    assert sorted(pd.read_csv(path)["l2_penalty"].unique()) == sorted(args.lambdas)
+    assert sorted(pd.read_csv(path)["m"].unique()) == sorted(args.m_values)
+
+
+def test_the_tuning_defaults_produce_the_committed_shrinkage_table():
+    """Same for the baseline's shrinkage sweep."""
+    path = RESULTS_DIR / "lasso_tuning.csv"
+    if not path.exists():
+        pytest.skip("lasso_tuning.csv is not present")
+
+    args = _defaults("tune_lasso")
+    table = pd.read_csv(path)
+    assert sorted(table["basis"].unique()) == sorted(args.bases)
+    assert sorted(table["alpha"].unique()) == sorted(args.alphas)
+    assert sorted(table["m"].unique()) == sorted(args.m_values)
+
+
+def test_the_benchmark_defaults_produce_the_committed_protocol():
+    """Running the benchmark bare has to give the protocol that is published."""
+    meta_path = RESULTS_DIR / "benchmark_meta.json"
+    if not meta_path.exists():
+        pytest.skip("benchmark_meta.json is not present")
+    recorded = json.loads(meta_path.read_text(encoding="utf-8"))["protocol"]
+
+    args = _defaults("run_benchmark")
+    for field in ("n_images", "steps", "restarts", "learning_rate", "l2_penalty", "noise_norm"):
+        assert getattr(args, field) == recorded[field], (
+            f"run_benchmark.py defaults {field}={getattr(args, field)}, but the "
+            f"committed sweep was run with {recorded[field]}"
+        )
+    assert sorted(args.m_values) == recorded["m_values"]
