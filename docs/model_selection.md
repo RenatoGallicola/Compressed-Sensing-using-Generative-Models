@@ -151,7 +151,7 @@ afterwards, on the same held-out training images, 32 of them:
 | fully connected `k=20`, seed 2 | 97.32 | **0.00531** | |
 
 The two criteria agree for both convolutional models and disagree for the fully
-connected one, where the validation losses are separated by 0.15 and the
+connected one, where the validation losses are separated by 0.14 and the
 representation errors by 20 per cent. The reading is that validation loss orders
 runs reliably when they are far apart and carries little information about
 recovery quality when they are close.

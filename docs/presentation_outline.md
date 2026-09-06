@@ -168,7 +168,8 @@ optimisation converged and not how good the answer is.
 
 **Slide.** `results/figures/reconstruction_grid.png`.
 
-**Say.** Both baselines return noise until about 200 measurements while every
+**Say.** The DCT baseline returns a noisy image until about 300 measurements
+and the pixel one an almost blank image until about 400, while every
 generative prior produces a plausible digit almost immediately. The DCGAN gives visibly
 sharper strokes, because an adversarial generator is pushed towards samples a
 discriminator accepts rather than towards the average of the plausible ones. But
@@ -216,7 +217,7 @@ comparisons are paired and we test them that way.
 
 - **The three VAE priors cannot be told apart.** Not one comparison among the
   paper's fully connected network, our k=20 and our k=30 reaches significance at
-  any budget: every corrected p-value is 1. Their floors span 0.0006 and ten
+  any budget: every corrected p-value is 1. Their floors span 0.0005 and ten
   images cannot separate that. Say this plainly; do not rank them from the
   table.
 - **Every prior beats both baselines at 100 measurements and loses to both at
@@ -284,7 +285,9 @@ quality varied by a factor of **3.5**, comparable to the entire spread between
 the architectures we set out to compare. The cause was partial posterior collapse:
 the decoder leaning on a handful of latent directions and ignoring the rest,
 which we measured directly. Adding a KL warm-up fixed it, and the spread across
-seeds fell to a factor 1.2.
+seeds is a factor of 2.5, 1.3 and 1.2 for the three configurations. That
+figure and the 3.5 are measured on different images and over a different
+number of seeds, so do not present them as one ratio shrinking.
 
 The point to land: before this we would have reported that latent dimension 30
 beats 20 by a wide margin, and that conclusion would have been an artefact of
@@ -343,7 +346,7 @@ truth is involved, so the same rule works when the true image is unknown.
 
 **Which of the three VAE architectures is best?**
 This experiment cannot say. With ten test images no comparison among them is
-significant at any budget, and their error floors span 0.0006. If pressed on why
+significant at any budget, and their error floors span 0.0005. If pressed on why
 we cannot separate them: the sample is ten images, not that the models are
 provably equal. More images would settle it, and the cost is recovery time.
 

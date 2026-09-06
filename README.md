@@ -206,7 +206,7 @@ image-to-image variation only.
 **The three VAEs are indistinguishable from each other.** Not one of the
 comparisons between the paper's fully connected architecture, our convolutional
 `k=20` and our convolutional `k=30` reaches significance at any budget; every
-corrected p-value is 1.0. Their floors differ by 0.0006, which ten images cannot
+corrected p-value is 1.0. Their floors differ by 0.0005, which ten images cannot
 separate. The honest reading is that neither the architecture nor the latent
 dimension matters here at this sample size, and any ranking between them read off
 the table would be noise.
@@ -286,7 +286,7 @@ afterwards, is in [`docs/model_selection.md`](docs/model_selection.md).
 │   ├── select_dcgan.py          picks a generator on held-out data
 │   ├── run_benchmark.py         the full sweep -> results/benchmark.csv
 │   ├── run_lambda_sweep.py      sensitivity to the latent regulariser
-│   ├── tune_lasso.py            picks the baseline's basis and shrinkage
+│   ├── tune_lasso.py            picks the baseline's shrinkage, in both bases
 │   ├── run_stats.py             paired significance tests -> significance.md
 │   └── make_figures.py          csv -> figures and summary tables
 ├── notebooks/                 narrated walkthrough (01 VAE, 02 DCGAN, 03 Lasso, 04 recovery)
