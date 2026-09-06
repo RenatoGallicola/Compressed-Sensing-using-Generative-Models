@@ -14,6 +14,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from scipy.stats import t as student_t
 
 from csgm.config import FIGURES_DIR, IMAGE_SHAPE, N_PIXELS, RESULTS_DIR
 from csgm.viz import plot_error_curves, save_figure
@@ -54,18 +55,28 @@ def error_curves(df: pd.DataFrame, figures_dir: Path) -> Path:
     Returns:
         Path of the written figure.
     """
+    # The reference paper plots 95% confidence intervals, so the bars here are
+    # the same quantity. With ten images the normal multiplier is too optimistic,
+    # so the interval uses Student's t. The bars describe image-to-image spread
+    # at one measurement matrix, not the spread over matrices.
+    n_images = df["image"].nunique()
+    multiplier = float(student_t.ppf(0.975, n_images - 1))
+
     curves, errorbars = {}, {}
     for method, group in df.groupby("method", sort=False):
         stats = group.groupby("m")["per_pixel_error"].agg(["mean", "sem"]).sort_index()
         label = LABELS.get(method, method)
         curves[label] = (stats.index.to_numpy(), stats["mean"].to_numpy())
-        errorbars[label] = np.nan_to_num(stats["sem"].to_numpy())
+        errorbars[label] = np.nan_to_num(stats["sem"].to_numpy()) * multiplier
 
     fig = plot_error_curves(
         curves,
         errorbars=errorbars,
         logx=True,
-        title=f"MNIST recovery from Gaussian measurements (mean of {df['image'].nunique()} images)",
+        title=(
+            f"MNIST recovery from Gaussian measurements\n"
+            f"mean of {n_images} images, bars are 95% confidence intervals"
+        ),
     )
     return save_figure(fig, figures_dir / "error_vs_measurements.png")
 
@@ -121,78 +132,107 @@ def metric_comparison(df: pd.DataFrame, figures_dir: Path) -> Path:
 
 
 def sample_efficiency(
-    df: pd.DataFrame, results_dir: Path, reference_m: int = 400, reference: str = "lasso-dct"
+    df: pd.DataFrame,
+    results_dir: Path,
+    ground_truth: np.ndarray | None = None,
+    reference_m: int = 400,
 ) -> Path:
-    """Report how few measurements each prior needs to match the baseline.
+    """Report how few measurements each prior needs to match each baseline.
 
     Bora et al. summarise their MNIST result as "25 measurements match Lasso's
     performance with 400"; this reproduces that statement from our own table.
 
-    The reference is the DCT baseline rather than the pixel one. At 400
-    measurements the pixel baseline is halfway through its transition from
-    failure to near-exact recovery, so its mean error is dominated by the one or
-    two digits it has not solved yet and does not describe a level any method can
-    be meaningfully compared against. The DCT baseline at the same budget has a
-    tight spread, so the comparison means what it appears to mean. Both
-    distributions are reported below.
+    The speed-up depends on which baseline it is measured against, so both are
+    reported rather than one. Quoting only the more favourable of the two would
+    be a choice made after seeing the answer, and the two baselines behave very
+    differently at this budget: the pixel basis is midway through its transition
+    from failure to near-exact recovery, so its mean is dominated by the few
+    digits it has not solved, while the DCT basis has a tight spread. The error
+    a blank image achieves is given alongside them, because a baseline scoring at
+    that level is not reconstructing anything and no speed-up against it means
+    very much.
 
     Args:
         df: Long-format benchmark table.
         results_dir: Output directory.
+        ground_truth: Scored images, used for the trivial-predictor reference.
         reference_m: Baseline budget used as the reference error level.
-        reference: Which baseline provides the reference level.
 
     Returns:
         Path of the written Markdown table.
     """
     path = results_dir / "sample_efficiency.md"
     wide = df.pivot_table(index=["m", "image"], columns="method", values="per_pixel_error")
-    if reference not in df["method"].values or reference_m not in df["m"].values:
+    methods = set(df["method"])
+    baselines = [b for b in ("lasso-dct", "lasso") if b in methods]
+    if not baselines or reference_m not in df["m"].values:
         path.write_text("Reference baseline not available in this benchmark.\n", encoding="utf-8")
         return path
 
-    per_image = wide.loc[reference_m, reference]
-    target = per_image.mean()
     means = df.groupby(["method", "m"])["per_pixel_error"].mean()
+    priors = [m for m in LABELS if not m.startswith("lasso") and m in methods]
 
     lines = [
-        f"# Sample efficiency against {LABELS[reference]} at m = {reference_m}",
+        f"# Sample efficiency at m = {reference_m}",
         "",
-        f"That baseline reaches a mean per-pixel error of {target:.4f} with {reference_m} "
-        f"measurements (median {per_image.median():.4f}, largest {per_image.max():.4f}).",
-        "For each prior, the smallest budget whose mean error is at or below that level,",
-        "and how many of the individual test images it beats there.",
+        "For each prior, the smallest budget whose mean error is at or below the",
+        "level a baseline reaches with "
+        f"{reference_m} measurements, and how many of the individual test images",
+        "it beats there. The comparison is given against both baselines, since the",
+        "speed-up depends on which one is used as the reference.",
         "",
-        "| prior | measurements needed | speed-up | images beaten |",
-        "|---|---|---|---|",
     ]
-    for method in (m for m in LABELS if not m.startswith("lasso") and m in set(df["method"])):
-        budgets = means[method]
-        matching = budgets.index[budgets <= target]
-        if len(matching) == 0:
-            lines.append(f"| {LABELS[method]} | never, in the sweep | n/a | n/a |")
-            continue
-        needed = int(matching.min())
-        wins = int((wide.loc[needed, method].to_numpy() <= per_image.to_numpy()).sum())
-        lines.append(
-            f"| {LABELS[method]} | {needed} | {reference_m / needed:.1f}x | "
-            f"{wins} of {len(per_image)} |"
-        )
 
-    other = "lasso" if reference == "lasso-dct" else "lasso-dct"
-    if other in df["method"].values:
-        alt = wide.loc[reference_m, other]
+    for reference in baselines:
+        per_image = wide.loc[reference_m, reference]
+        target = per_image.mean()
         lines += [
+            f"## Against {LABELS[reference]}",
             "",
-            f"## Why not {LABELS[other]}",
+            f"Mean per-pixel error {target:.4f} at {reference_m} measurements "
+            f"(median {per_image.median():.4f}, largest {per_image.max():.4f}, "
+            f"{int((per_image < 1e-3).sum())} of {len(per_image)} images below 0.001).",
             "",
-            f"At {reference_m} measurements its error is {alt.mean():.4f} on average but "
-            f"{alt.median():.4f} at the median, with "
-            f"{int((alt < 1e-3).sum())} of {len(alt)} images already below 0.001 and the worst at "
-            f"{alt.max():.4f}. It is midway through the transition from failure to near-exact "
-            "recovery, so its mean at this budget is set by the digits it has not solved and is "
-            "not a level worth comparing against.",
+            "| prior | measurements needed | speed-up | images beaten |",
+            "|---|---|---|---|",
         ]
+        for method in priors:
+            budgets = means[method]
+            matching = budgets.index[budgets <= target]
+            if len(matching) == 0:
+                lines.append(f"| {LABELS[method]} | never, in the sweep | n/a | n/a |")
+                continue
+            needed = int(matching.min())
+            wins = int((wide.loc[needed, method].to_numpy() <= per_image.to_numpy()).sum())
+            lines.append(
+                f"| {LABELS[method]} | {needed} | {reference_m / needed:.1f}x | "
+                f"{wins} of {len(per_image)} |"
+            )
+        lines.append("")
+
+    if ground_truth is not None:
+        trivial = float((np.asarray(ground_truth) ** 2).mean())
+        at_or_above = [
+            int(m)
+            for m in sorted(df["m"].unique())
+            if "lasso" in methods and means["lasso"][m] >= trivial
+        ]
+        lines += [
+            "## The level of a blank image",
+            "",
+            f"Predicting an all-zero image scores {trivial:.4f} per pixel on these digits, "
+            "which is the error any method has to beat before it can be said to be "
+            "reconstructing anything.",
+            "",
+        ]
+        if at_or_above:
+            budgets = ", ".join(str(m) for m in at_or_above)
+            lines += [
+                f"The pixel-basis baseline is at or above that level at m = {budgets}. "
+                "A speed-up quoted against it at those budgets is a comparison against a "
+                "blank image, so the DCT baseline is the meaningful reference there.",
+                "",
+            ]
 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
@@ -460,17 +500,23 @@ def main() -> None:
     df = pd.read_csv(csv_path)
     args.figures_dir.mkdir(parents=True, exist_ok=True)
 
+    npz_path = args.results_dir / "reconstructions.npz"
+    recons = None
+    if npz_path.exists():
+        with np.load(npz_path) as archive:
+            recons = dict(archive)
+
     written = [
         error_curves(df, args.figures_dir),
         metric_comparison(df, args.figures_dir),
         summary_table(df, args.results_dir),
-        sample_efficiency(df, args.results_dir),
+        sample_efficiency(
+            df, args.results_dir, None if recons is None else recons.get("ground_truth")
+        ),
     ]
 
-    npz_path = args.results_dir / "reconstructions.npz"
-    if npz_path.exists():
-        with np.load(npz_path) as recons:
-            written.append(reconstruction_grid(dict(recons), df, args.figures_dir, args.grid_image))
+    if recons is not None:
+        written.append(reconstruction_grid(recons, df, args.figures_dir, args.grid_image))
 
     samples = prior_samples(args.figures_dir)
     if samples is not None:
