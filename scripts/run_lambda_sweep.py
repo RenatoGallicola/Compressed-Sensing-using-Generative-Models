@@ -2,8 +2,12 @@
 
 Bora et al. minimise ``||A G(z) - y||^2 + lambda ||z||^2``. The second term keeps
 the solution inside the region where the prior places most of its mass. The main
-benchmark uses the value they recommend, 0.1; this script sweeps it to show how
-much that choice matters.
+benchmark uses the value they recommend, 0.1, which is the default of
+``run_benchmark.py``; this script sweeps it to show how much that choice matters.
+
+The sweep runs on its own draw of images, matrices and noise, disjoint from the
+ones the benchmark scores, so that reading a preferred penalty off this table
+would not be selection on the evaluation set.
 
 Only the VAE decoders are swept: they invert in about twenty seconds per
 configuration, against roughly thirteen minutes for a DCGAN generator, so the

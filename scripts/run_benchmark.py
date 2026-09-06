@@ -65,7 +65,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--restarts", type=int, default=10, help="random restarts per image")
     parser.add_argument("--learning-rate", type=float, default=0.01, help="Adam step size on z")
     parser.add_argument(
-        "--l2-penalty", type=float, default=0.0, help="weight of the ||z||^2 prior term"
+        "--l2-penalty",
+        type=float,
+        default=0.1,
+        help=(
+            "weight of the ||z||^2 prior term. The default is the value Bora et al. "
+            "report as best on MNIST and the one the published table uses; pass 0 to "
+            "reproduce the unregularised sweep"
+        ),
     )
     parser.add_argument(
         "--noise-norm",
@@ -98,6 +105,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help="global random seed")
     parser.add_argument(
         "--output-dir", type=Path, default=RESULTS_DIR, help="where to write csv/npz"
+    )
+    parser.add_argument(
+        "--allow-stale-checkpoints",
+        action="store_true",
+        help=(
+            "permit --merge to keep rows produced by a different build of a generator. "
+            "The result mixes model generations under one label, so it is off by default"
+        ),
     )
     parser.add_argument(
         "--merge",
@@ -303,14 +318,25 @@ def main() -> None:
 
         previous = pd.read_csv(csv_path)
         if "checkpoint" in previous.columns:
+            # Two runs can agree on every command-line setting and still rest on
+            # different generators, which is exactly what a merged table must not
+            # hide. Rows that are kept, rather than recomputed, have to have been
+            # produced by the checkpoints still on disk.
             kept = previous[~previous["method"].isin(args.methods)]
+            current = {method: fingerprint(method) for method in set(kept["method"])}
             stale = {
-                method: sorted(set(group["checkpoint"]))
+                method: (sorted(set(group["checkpoint"])), current[method])
                 for method, group in kept.groupby("method")
-                if method in fingerprints and fingerprints[method] not in set(group["checkpoint"])
+                if set(group["checkpoint"]) != {current[method]}
             }
+            if stale and not args.allow_stale_checkpoints:
+                raise SystemExit(
+                    "refusing to merge: these rows were produced by a different "
+                    f"build of their generator, {stale}. Recompute them, or pass "
+                    "--allow-stale-checkpoints if mixing them is deliberate"
+                )
             if stale:
-                print(f"note: rows kept from an earlier build of {sorted(stale)}")
+                print(f"warning: keeping rows from an earlier build of {sorted(stale)}")
         table = pd.concat([previous[~previous["method"].isin(args.methods)], table])
         table = table.sort_values(["method", "m", "image"]).reset_index(drop=True)
 
