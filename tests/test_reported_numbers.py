@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import re
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -21,6 +22,14 @@ REPORT = ROOT_DIR / "docs" / "report"
 PRIORS = ["fcvae-20", "vae-20", "vae-30", "dcgan-20", "dcgan-30"]
 BASELINES = ["lasso", "lasso-dct"]
 REFERENCE, REFERENCE_M = "lasso-dct", 400
+#: The names scripts/make_figures.py prints for each method.
+LABELS = {
+    "fcvae-20": "VAE, paper architecture, k=20",
+    "vae-20": "VAE, k=20",
+    "vae-30": "VAE, k=30",
+    "dcgan-20": "DCGAN, k=20",
+    "dcgan-30": "DCGAN, k=30",
+}
 
 
 @pytest.fixture(scope="module")
@@ -120,34 +129,42 @@ def test_sample_efficiency_table_is_reproducible(benchmark, means):
     text = path.read_text(encoding="utf-8")
 
     wide = benchmark.pivot_table(index=["m", "image"], columns="method", values="per_pixel_error")
-    reference = wide.loc[REFERENCE_M, REFERENCE]
-    target = reference.mean()
 
-    assert f"{target:.4f}" in text
-    for method in PRIORS:
-        budgets = means[method]
-        matching = budgets.index[budgets <= target]
-        if len(matching) == 0:
-            continue
-        needed = int(matching.min())
-        wins = int((wide.loc[needed, method].to_numpy() <= reference.to_numpy()).sum())
-        row = next(
-            line
-            for line in text.splitlines()
-            if line.startswith("| ") and str(needed) in line and method.split("-")[1] in line
-        )
-        assert f"| {needed} |" in row, f"{method}: expected budget {needed} in {row!r}"
-        assert f"{wins} of 10" in row, f"{method}: expected {wins} wins in {row!r}"
+    # The table is generated for both baselines, so both sections are checked.
+    sections = text.split("## Against ")[1:]
+    assert len(sections) == 2, "expected one section per baseline"
+
+    checked = 0
+    for baseline, section in zip(["lasso-dct", "lasso"], sections, strict=True):
+        reference = wide.loc[REFERENCE_M, baseline]
+        target = reference.mean()
+        assert f"{target:.4f}" in section, f"{baseline}: reference level missing"
+
+        for method in PRIORS:
+            budgets = means[method]
+            matching = budgets.index[budgets <= target]
+            label = LABELS[method]
+            row = next(line for line in section.splitlines() if line.startswith(f"| {label} |"))
+            if len(matching) == 0:
+                assert "never" in row, f"{method}: expected no matching budget in {row!r}"
+                checked += 1
+                continue
+            needed = int(matching.min())
+            wins = int((wide.loc[needed, method].to_numpy() <= reference.to_numpy()).sum())
+            assert f"| {needed} |" in row, f"{method}: expected budget {needed} in {row!r}"
+            assert f"{wins} of 10" in row, f"{method}: expected {wins} wins in {row!r}"
+            checked += 1
+    assert checked == 2 * len(PRIORS)
 
 
 @pytest.mark.parametrize(
     ("method", "expected"),
     [
-        ("fcvae-20", 0.0065),
-        ("vae-30", 0.0074),
-        ("vae-20", 0.0095),
+        ("vae-30", 0.0070),
+        ("fcvae-20", 0.0072),
+        ("vae-20", 0.0076),
         ("dcgan-20", 0.0098),
-        ("dcgan-30", 0.0233),
+        ("dcgan-30", 0.0235),
     ],
 )
 def test_quoted_error_floors(means, method, expected):
@@ -175,10 +192,30 @@ def test_the_reference_baseline_is_the_well_behaved_one(benchmark):
 
 
 def test_quoted_low_budget_factors(means):
-    """The 5.6x and 4.7x quoted at 25 measurements."""
+    """The factors quoted at 25 measurements, against both baselines."""
     best = means.loc[25, PRIORS].min()
-    assert means["lasso"][25] / best == pytest.approx(5.6, abs=0.05)
-    assert means["lasso-dct"][25] / best == pytest.approx(4.7, abs=0.05)
+    assert means["lasso"][25] / best == pytest.approx(6.1, abs=0.05)
+    assert means["lasso-dct"][25] / best == pytest.approx(5.1, abs=0.05)
+
+
+def test_the_trivial_predictor_level_is_quoted_where_it_matters(benchmark, means):
+    """A baseline at or above the blank-image error is not reconstructing anything.
+
+    The write-ups quote that level and name the budgets where the pixel baseline
+    sits at or above it, so both have to keep matching the data.
+    """
+    path = RESULTS_DIR / "reconstructions.npz"
+    if not path.exists():
+        pytest.skip("reconstructions.npz is not present")
+    with np.load(path) as archive:
+        trivial = float((archive["ground_truth"] ** 2).mean())
+
+    degenerate = [int(m) for m in means.index if means["lasso"][m] >= trivial]
+    assert degenerate == [10, 25]
+
+    for doc in (ROOT_DIR / "README.md", REPORT / "results.tex"):
+        text = doc.read_text(encoding="utf-8")
+        assert f"{trivial:.4f}" in text, f"the blank-image level is missing from {doc.name}"
 
 
 def test_crossover_budget(means):
@@ -191,11 +228,11 @@ def test_crossover_budget(means):
 def test_quoted_recovery_costs(benchmark):
     """The per-configuration timings quoted in the cost sections."""
     seconds = benchmark.groupby("method")["seconds_per_batch"].mean()
-    assert seconds["lasso"] == pytest.approx(1.4, abs=0.25)
-    assert seconds["lasso-dct"] == pytest.approx(0.9, abs=0.25)
-    assert seconds["fcvae-20"] == pytest.approx(6.8, abs=0.5)
+    assert seconds["lasso"] == pytest.approx(1.5, abs=0.3)
+    assert seconds["lasso-dct"] == pytest.approx(1.5, abs=0.3)
+    assert seconds["fcvae-20"] == pytest.approx(6.6, abs=0.5)
     assert seconds[["dcgan-20", "dcgan-30"]].mean() / seconds["fcvae-20"] == pytest.approx(
-        73, abs=5
+        102, abs=6
     )
 
 
@@ -209,17 +246,28 @@ def test_lambda_sweep_endpoints():
 
     for method in table.columns.get_level_values(0).unique():
         best = table[method].idxmin(axis=1)
-        assert best[10] == 1.0 and best[25] == 1.0, f"{method} at the smallest budgets"
+        assert best[10] == 1.0, f"{method} at the smallest budget"
         assert all(best[m] == 0.0 for m in (200, 300, 400, 500, 750)), f"{method} at the largest"
+        # In between the three priors disagree, which is the point the write-ups
+        # make about a single recommended value being a compromise.
+    disagree = {
+        float(table[method].idxmin(axis=1)[25])
+        for method in table.columns.get_level_values(0).unique()
+    }
+    assert len(disagree) > 1, "the priors are expected to disagree at 25 measurements"
 
 
 def test_no_superseded_figures_survive_in_the_prose():
     """Values from earlier versions of the experiment must not linger."""
     stale = {
-        "0.1049 for Lasso": "the m=25 baseline is now quoted for both bases",
-        "a 5.3x saving.**": "the headline is 8x against the DCT baseline",
+        "an 8x saving": "the headline is 5.3x, against either baseline",
+        "5.6x more accurate": "the m=25 factors are 6.1x and 5.1x",
         "factor of three across seeds": "the seed spread is 3.5",
-        "as much again": "the unregularised sweep costs 4.5 hours, not 2.9",
+        "The paper's simpler architecture beats ours": (
+            "the three VAE priors are statistically indistinguishable"
+        ),
+        "factor 73": "the cost ratio is 102",
+        "swept over six values": "the shrinkage sweep covers eight values, per budget",
     }
     files = [
         ROOT_DIR / "README.md",

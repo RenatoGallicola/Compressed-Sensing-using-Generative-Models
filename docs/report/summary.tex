@@ -47,9 +47,9 @@ The MNIST images were vectorized, resulting in 784-dimensional input vectors. Ea
 The reconstruction performance was evaluated as the squared error between the original and the reconstructed image, divided by the number of pixels, averaged over ten test images, one for each digit class. The following observations were made:
 
 \begin{enumerate}
-    \item \textbf{Performance with few measurements:} every generative prior is far more accurate than either LASSO baseline when measurements are scarce. The architecture of the reference paper reaches with 50 measurements the accuracy the DCT baseline obtains with 400, a saving of a factor 8, within the range of 5 to 10 the authors report.
+    \item \textbf{Performance with few measurements:} every generative prior is far more accurate than either LASSO baseline when measurements are scarce. Every VAE prior reaches with 75 measurements the accuracy either baseline obtains with 400, a saving of a factor 5.3, within the range of 5 to 10 the authors report.
     \item \textbf{Saturation:} the accuracy of the generative priors stops improving after roughly 200 measurements, because the reconstruction is confined to the range of the generator. From 500 measurements onwards both LASSO baselines become more accurate, as the reference paper predicts, and with 750 measurements the one in the pixel basis recovers the digits almost exactly.
-    \item \textbf{Comparison between the models:} the fully connected architecture of the paper is the most accurate of the priors and the cheapest of them to invert, while the DCGAN is the least accurate at almost every budget and about 73 times more expensive.
+    \item \textbf{Comparison between the models:} the three VAE priors cannot be told apart with ten test images, no comparison among them being significant at any budget, while the DCGAN is the least accurate at almost every budget and about 102 times more expensive to invert than the cheapest of them.
 \end{enumerate}
 
 \subsection{Conclusion}
