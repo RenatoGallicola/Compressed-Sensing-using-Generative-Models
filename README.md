@@ -14,7 +14,8 @@ bases as the classical sparsity prior.
 
 > Course project for **Numerical Analysis for Machine Learning**, MSc in Computer
 > Science and Engineering, Politecnico di Milano.
-> The original write-up is in [`docs/NAML_project_report.pdf`](docs/NAML_project_report.pdf).
+> The write-up is in [`docs/report/`](docs/report), one LaTeX file per section,
+> building with any pdfTeX toolchain.
 
 <p align="center">
   <img src="results/figures/error_vs_measurements.png" width="88%"
@@ -137,11 +138,13 @@ that the low-budget comparisons can be read for what they are.
 
 ### Three regimes
 
-**Scarce measurements, up to about 400.** Every learned prior beats both
-baselines. At 25 measurements the best of them is 5.1x more accurate than the
-DCT baseline, at a budget where neither baseline returns anything recognisable as
-a digit. The ratio against the pixel baseline is 6.1x, but that one is at the
-blank-image level here, so the DCT figure is the meaningful one.
+**Scarce measurements.** Every VAE prior beats both baselines up to 400
+measurements, and the DCGAN at `k=20` up to 300. The DCGAN at `k=30` is the
+exception and is beaten by the DCT baseline from 300 up. At 25 measurements the
+best prior is 5.1x more accurate than the DCT baseline, at a budget where
+neither baseline returns anything recognisable as a digit. The ratio against the
+pixel baseline is 6.1x, but that one is at the blank-image level here, so the DCT
+figure is the meaningful one.
 
 **Sample efficiency.** Each of the three VAE priors reaches the error the Lasso
 baseline achieves with 400 measurements using only **75**, a **5.3x** saving.
@@ -179,10 +182,19 @@ differences, corrected across the ten budgets by the Holm procedure. The tables
 are in [`results/significance.md`](results/significance.md), produced by
 [`scripts/run_stats.py`](scripts/run_stats.py).
 
-**Generative priors beat sparse recovery, and then lose to it.** Every prior is
-significantly more accurate than both baselines across the middle of the range,
-and significantly less accurate at 750. The crossover is the substance of the
-reproduction and it survives correction comfortably.
+**Generative priors beat sparse recovery, and then lose to it.** At 750
+measurements all ten prior-and-baseline pairs put the baseline ahead, with the
+difference significant in every one. In the other direction the picture is
+narrower than the means suggest: 100 measurements is the only budget at which
+every prior beats every baseline significantly at once, because the two DCGAN
+columns drop out at several budgets. Each VAE prior on its own is significantly
+better than both baselines from 25 to 300. Corrected p-values run to 0.04 where
+these hold.
+
+These tests are conditional on one measurement matrix per budget. The pairing
+across images is real, but ten images under a single draw of `A` is not ten
+independent sensing realisations, so the intervals and the p-values describe
+image-to-image variation only.
 
 **The three VAEs are indistinguishable from each other.** Not one of the
 comparisons between the paper's fully connected architecture, our convolutional
@@ -192,12 +204,17 @@ separate. The honest reading is that neither the architecture nor the latent
 dimension matters here at this sample size, and any ranking between them read off
 the table would be noise.
 
-**The VAE family beats the DCGAN at `k=30` and the evidence is thin at `k=20`.**
-Against `dcgan-30` every VAE is significantly better at almost every budget.
-Against `dcgan-20` the difference reaches significance at a single budget for
-each VAE. The DCGAN checkpoints also carry a smaller selection budget than the
-VAE ones, described in [`docs/model_selection.md`](docs/model_selection.md), so
-this comparison is the weakest one reported here.
+**The VAE family beats the DCGAN at `k=30`, and at `k=20` the answer depends on
+the regulariser.** Against `dcgan-30` every VAE is significantly better at almost
+every budget. Against `dcgan-20` the difference reaches significance at a single
+budget in the table above, which uses $\lambda = 0.1$; in the unregularised
+sweep the same comparison is significant at eight budgets out of ten. That is
+worth stating plainly, because $\lambda = 0.1$ is the value Bora et al. report
+for their MNIST **VAE**, while for their DCGAN they report 0.001. The DCGAN
+columns therefore carry a penalty two orders of magnitude larger than the one the
+paper prescribes for a GAN, and it was never swept for them. Together with the
+smaller selection budget and the training-set leakage described below, this makes
+the VAE-against-DCGAN comparison the weakest one reported here.
 
 ### The latent regulariser
 
@@ -225,7 +242,7 @@ repeating it for the DCGANs would cost hours.
 Recovering ten images at one budget, ten restarts and a thousand Adam steps:
 about 1.5 s with either Lasso baseline, 6.6 s with the paper's decoder, 15 s and
 19 s with our convolutional decoders, and about 670 s with a DCGAN generator, a
-**102x** gap between the cheapest and the dearest learned prior. Parameter counts
+**103x** gap between the cheapest and the dearest learned prior. Parameter counts
 do not explain that: the DCGAN generator is only 4.5x larger than the paper's
 decoder, and our convolutional decoder is *smaller* than it yet twice as slow.
 What the cost tracks is arithmetic per forward pass, and the DCGAN applies
@@ -238,8 +255,12 @@ this dataset there is no trade-off to arbitrate.
 Training the same VAE with different seeds produced generators whose quality
 varied by a **factor of 3.5**, comparable to the entire spread between the priors
 being compared. The cause was partial posterior collapse, and a KL warm-up
-removed it: the spread across seeds fell to a factor 1.2 and every model
-improved. The selection procedure, fixed before the runs and unchanged
+addressed it: every model improved, the best representation error at `k=30`
+falling from 0.0103 to 0.0062. Across the two seeds of each configuration the
+remaining spread is a factor of 2.5, 1.3 and 1.2. Those two sets of figures are
+not the same measurement, being taken on different images and over a different
+number of seeds, so they are reported side by side rather than as one ratio
+shrinking. The selection procedure, fixed before the runs and unchanged
 afterwards, is in [`docs/model_selection.md`](docs/model_selection.md).
 
 ## Repository layout
@@ -267,7 +288,7 @@ afterwards, is in [`docs/model_selection.md`](docs/model_selection.md).
 │   ├── figures/                 figures used in the docs
 │   ├── model_selection.md       how the VAE checkpoints were chosen
 │   ├── presentation_outline.md  slide-by-slide outline of the talk
-│   └── NAML_project_report.pdf  the compiled report
+│   └── report/                  LaTeX source of the write-up
 └── tests/                     pytest suite covering the package
 ```
 
@@ -397,12 +418,16 @@ copy of the first rows of $A$ rather than an independent draw, which is not the
 model the recovery guarantees are stated for, even though the marginal law of
 $\eta$ would look correct.
 
-**Nothing is tuned on the images that are scored.** The Lasso shrinkage and the
-sweep over the latent penalty each run on their own draw of images, matrices and
-noise, disjoint from the benchmark's; the generator checkpoints are chosen on
-held-out data that is never part of the test split. The one hyper-parameter used
-without being tuned here is the latent penalty itself, which is taken from the
-reference paper.
+**No hyper-parameter and no checkpoint is chosen on the images that are
+scored.** The Lasso shrinkage and the sweep over the latent penalty each run on
+their own draw of images, matrices and noise, disjoint from the benchmark's; the
+generator checkpoints are chosen on held-out data that is never part of the test
+split. The latent penalty itself is not tuned here at all, being taken from the
+reference paper. One design decision does not meet that standard and is recorded
+rather than glossed: the KL warm-up was adopted after observing how much seed
+variance showed up on test digits. It changed how the generators are trained, not
+which checkpoint was kept, and the reasoning is in
+[`docs/model_selection.md`](docs/model_selection.md).
 
 ### Limitations
 
@@ -420,9 +445,14 @@ reference paper.
   VAEs from each other anywhere: every corrected p-value between them is 1.0.
   Which comparisons hold at which budget is stated above rather than averaged
   over.
-- **The DCGAN checkpoints saw the test split during training.** They were
-  produced before the training script held it out, so the two DCGAN columns are
-  optimistic by an unknown amount and are not a clean held-out measurement. The
+- **The DCGAN checkpoints saw the test split during training, and predate the
+  current recipe.** They were produced before the training script held the test
+  split out, so the two DCGAN columns are optimistic by an unknown amount and are
+  not a clean held-out measurement. They also predate the alignment of the
+  training recipe with the reference paper, so they were trained at a different
+  learning rate, batch size and momentum, with one generator update per
+  discriminator update instead of two, and no checkpoint selection was applied to
+  them. The
   VAE columns are unaffected: those generators were trained on 54,000 training
   images with the test split untouched. Retraining a DCGAN takes about ten hours
   on CPU, which is why the columns are published with this caveat rather than

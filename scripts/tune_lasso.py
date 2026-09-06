@@ -37,6 +37,11 @@ from csgm.data import load_mnist, sample_images
 from csgm.measurements import gaussian_measurement_matrix, measure
 from csgm.metrics import per_pixel_l2
 
+#: The grid stops at 1e-1 on purpose. Above it the solution collapses to the
+#: all-zero image, which scores 0.1178 per pixel on these digits and would be
+#: selected as "best" at the budgets where the baseline recovers nothing. That is
+#: a degenerate configuration rather than a well tuned one, so the ceiling is kept
+#: and the budgets where the baseline sits at that level are reported instead.
 DEFAULT_ALPHAS = (1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1)
 DEFAULT_M_VALUES = (10, 25, 50, 75, 100, 200, 300, 400, 500, 750)
 

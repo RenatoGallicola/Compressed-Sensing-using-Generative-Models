@@ -147,15 +147,18 @@ optimisation converged and not how good the answer is.
 
 **Say.**
 
-- At 25 measurements the best prior reaches 0.0225 against 0.1255 for the
-  paper's pixel baseline and 0.1049 for the DCT one, **5.6 and 4.7 times
-  better**, at a budget where neither baseline returns anything recognisable.
-- The DCT baseline needs 400 measurements to reach 0.0117. The paper's
-  architecture gets there with **50**, an **8x** saving, and beats that baseline
-  on 8 of the 10 digits. The paper reports 5 to 10x, so we land inside it.
-- If asked why the DCT baseline is the reference: at 400 measurements the pixel
-  one is mid-transition, median 0.0005 against mean 0.0108, so its mean is not a
-  level anything can be compared against.
+- At 25 measurements the best prior reaches 0.0194 against 0.0986 for the DCT
+  baseline, **5.1 times better**, at a budget where neither baseline returns
+  anything recognisable.
+- Either baseline needs 400 measurements to reach about 0.011. All three VAE
+  priors get there with **75**, a **5.3x** saving. The factor is the same
+  against both baselines, so it does not rest on which one we pick. The paper
+  reports 5 to 10x, so we land at the bottom of that range.
+- If asked about the pixel baseline: predicting a blank image scores 0.1178 on
+  these digits, and the pixel baseline is at or above that at 10 and 25
+  measurements, so a ratio against it there compares against nothing. At 400 it
+  is mid-transition, median 0.0003 against mean 0.0107, which is why the count
+  of images beaten differs so much between the two baselines.
 
 ---
 
@@ -179,18 +182,18 @@ measurements up.
 
 | prior | error floor |
 |---|---|
-| VAE, paper architecture | 0.0065 |
-| VAE k=30 | 0.0074 |
-| VAE k=20 | 0.0095 |
+| VAE k=30 | 0.0070 |
+| VAE, paper architecture | 0.0072 |
+| VAE k=20 | 0.0076 |
 | DCGAN k=20 | 0.0098 |
-| DCGAN k=30 | 0.0233 |
+| DCGAN k=30 | 0.0235 |
 
 **Say.** Past roughly 200 measurements the learned priors stop improving. The
 bottleneck is no longer information, it is that the true digit is not in the
 range of G, and that distance does not depend on the budget. From 500
 measurements both baselines overtake everything, and at 750 the pixel one
 recovers the digits almost exactly while the priors stay put. The paper says the
-reversal takes more than 500 measurements; we see it from 500 onwards. A factor 3.6 separates the best floor
+reversal takes more than 500 measurements; we see it from 500 onwards. A factor 3.4 separates the best floor
 from the worst, so on this side of the plot the generator matters far more than
 the recovery algorithm.
 
@@ -203,16 +206,19 @@ the recovery algorithm.
 **Say.** Every method sees the same images and the same matrices, so the
 comparisons are paired and we test them that way.
 
-- **The paper's simpler network beats ours.** Same latent dimension,
-  significantly more accurate from 75 measurements up, p at or below 0.004,
-  better on 9 of 10 images. We did not expect that.
-- **k=30 beats k=20, but only from 75 measurements up**, p = 0.028 there and at
-  or below 0.005 above. Below 75 the difference is not significant and its sign
-  is not even stable: too few measurements to determine the extra coordinates.
-- **The VAE beats the DCGAN at 10 and 50 measurements**, p = 0.011 and 0.024,
-  but not at 25, 75 or 100; from 200 they are indistinguishable. Say that out
-  loud rather than rounding it up to "the VAE wins when measurements are
-  scarce".
+- **The three VAE priors cannot be told apart.** Not one comparison among the
+  paper's fully connected network, our k=20 and our k=30 reaches significance at
+  any budget: every corrected p-value is 1. Their floors span 0.0006 and ten
+  images cannot separate that. Say this plainly; do not rank them from the
+  table.
+- **Every prior beats both baselines in the middle of the range and loses at
+  750.** That crossover is the reproduction, and it is the claim that survives
+  correction.
+- **The VAE beats the DCGAN at k=30 clearly, at k=20 only at one budget** under
+  the penalty the main table uses. Worth knowing if asked: with the penalty
+  removed the k=20 comparison becomes significant at eight budgets out of ten.
+  The conclusion there depends on a hyper-parameter the paper prescribes for its
+  VAE, not for its GAN.
 
 Saying out loud which differences do not reach significance is worth more than
 claiming five results and defending three.
@@ -225,13 +231,16 @@ claiming five results and defending three.
 
 **Say.** The paper uses $\lambda = 0.1$ and plots both variants, so we did the
 same. It helps exactly where the measurements underdetermine the code: at 10
-measurements it takes the best model from 0.0808 to 0.0609, a 25% gain. It costs
-slightly once measurements are plentiful, 0.0054 to 0.0064 at 750, because the
+measurements it takes the best model from 0.0782 to 0.0680, a 13% gain. It costs
+slightly once measurements are plentiful, 0.0054 to 0.0069 at 750, because the
 same pull towards the prior keeps the solution off the closest point in the
 range. The sweep confirms the mechanism: the norm of the recovered code falls
-monotonically from 7.7 to 2.5, and the best value of lambda is not fixed but
+monotonically from 9.95 to 2.67, and the best value of lambda is not fixed but
 falls with the budget, 1 at 10 measurements and 0 from 200 up. The single value
-the paper recommends is a compromise, not an optimum at any one budget.
+the paper recommends is a compromise, not an optimum at any one budget. Note
+also that 0.1 is the value the paper gives for its MNIST VAE; for its DCGAN it
+gives 0.001, which we do not use, so the DCGAN columns carry a penalty that was
+never validated for them.
 
 ---
 
@@ -241,13 +250,12 @@ the paper recommends is a compromise, not an optimum at any one budget.
 
 | method | seconds to recover 10 images at one budget |
 |---|---|
-| Lasso, pixel basis | 1.4 |
-| Lasso, DCT basis | 0.9 |
-| VAE, paper architecture | 6.8 |
-| VAE, convolutional | about 15 |
-| DCGAN | about 496 |
+| Lasso, either basis | about 1.5 |
+| VAE, paper architecture | 6.6 |
+| VAE, convolutional | 15 and 19 |
+| DCGAN | about 670 |
 
-**Say.** A **73x** gap between the cheapest and the dearest learned prior.
+**Say.** A **103x** gap between the cheapest and the dearest learned prior.
 Parameter count does not explain it: the DCGAN generator is only 4.5x larger, and
 our convolutional decoder is smaller than the paper's yet twice as slow. What it
 tracks is arithmetic per forward pass, and the DCGAN convolves 256 and 512
@@ -286,8 +294,9 @@ the repository.
   for, and that reproduces the reference paper.
 - It buys that with a ceiling set by the generator, and with a reconstruction
   orders of magnitude more expensive.
-- The simplest of the three generators was the best one, and the training run
-  mattered more than the architecture.
+- The three VAE generators could not be told apart with ten test images, so the
+  training run mattered more than the architecture, which is the one thing we
+  can say about the choice between them.
 
 **Say.** Close on where this matters. Medical imaging, and any setting where a
 single measurement is slow, expensive or harmful to the subject, and where the
