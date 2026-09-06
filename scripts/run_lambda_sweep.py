@@ -39,7 +39,12 @@ DEFAULT_M_VALUES = (10, 25, 50, 75, 100, 200, 300, 400, 500, 750)
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--methods", nargs="+", default=["vae-20", "vae-30"])
+    parser.add_argument(
+        "--methods",
+        nargs="+",
+        default=["vae-20", "vae-30", "fcvae-20"],
+        help="the three VAE priors; the DCGANs are excluded because a sweep over them costs hours",
+    )
     parser.add_argument("--lambdas", nargs="+", type=float, default=list(DEFAULT_LAMBDAS))
     parser.add_argument("--m-values", nargs="+", type=int, default=list(DEFAULT_M_VALUES))
     parser.add_argument("--n-images", type=int, default=10)
