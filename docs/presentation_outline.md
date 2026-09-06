@@ -188,6 +188,12 @@ measurements up.
 | DCGAN k=20 | 0.0098 |
 | DCGAN k=30 | 0.0235 |
 
+**Caveat to have ready.** The two DCGAN rows come from generators that were
+trained on the training and test splits together, before the split was held out,
+and with a training recipe that has since been aligned with the reference paper.
+They are optimistic by an unknown amount. Say it if the DCGAN numbers are
+questioned, and do not lean on them for any conclusion.
+
 **Say.** Past roughly 200 measurements the learned priors stop improving. The
 bottleneck is no longer information, it is that the true digit is not in the
 range of G, and that distance does not depend on the budget. From 500
