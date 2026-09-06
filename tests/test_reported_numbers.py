@@ -306,8 +306,16 @@ def test_no_superseded_figures_survive_in_the_prose():
         "p = 0.028": "no comparison among the VAE priors is significant",
         "factor of three across seeds": "the seed spread is 3.5",
     }
-    for path in DOCUMENTS + list(REPORT.glob("*.tex")):
-        text = normalise(path.read_text(encoding="utf-8"))
+    prose = {path: path.read_text(encoding="utf-8") for path in DOCUMENTS}
+    prose |= {path: path.read_text(encoding="utf-8") for path in REPORT.glob("*.tex")}
+    # Notebooks carry prose too, and their stored output is megabytes of base64,
+    # so only the authored cells are searched.
+    for path in sorted((ROOT_DIR / "notebooks").glob("*.ipynb")):
+        cells = json.loads(path.read_text(encoding="utf-8"))["cells"]
+        prose[path] = "\n".join("".join(cell["source"]) for cell in cells)
+
+    for path, text in prose.items():
+        text = normalise(text)
         for phrase, why in stale.items():
             assert phrase not in text, f"{path.name} still contains {phrase!r}: {why}"
 
