@@ -10,7 +10,9 @@ These tests read the committed results; they do not run the experiment.
 
 from __future__ import annotations
 
+import json
 import re
+import subprocess
 
 import numpy as np
 import pandas as pd
@@ -257,25 +259,95 @@ def test_lambda_sweep_endpoints():
     assert len(disagree) > 1, "the priors are expected to disagree at 25 measurements"
 
 
+def normalise(text: str) -> str:
+    r"""Strip the markup a phrase may be wrapped in, and collapse whitespace.
+
+    The guard below matches phrases against prose that is written in Markdown and
+    in LaTeX, where the same sentence may carry ``**bold**``, ``\\textbf{}``,
+    backticks or a line break in the middle of it. Matching the raw text meant
+    every phrase in the list silently failed to match, so the guard passed while
+    the values it names were still present.
+    """
+    text = re.sub(r"\\textbf\{([^}]*)\}", r"\1", text)
+    text = text.replace("**", "").replace("`", "").replace("*", "")
+    return re.sub(r"\s+", " ", text)
+
+
+DOCUMENTS = [
+    ROOT_DIR / "README.md",
+    ROOT_DIR / "docs" / "presentation_outline.md",
+    ROOT_DIR / "docs" / "model_selection.md",
+    ROOT_DIR / "models" / "README.md",
+]
+
+
+def test_the_guard_would_notice_markup():
+    """The normaliser has to see through the markup the prose actually uses."""
+    assert "an 8x saving" in normalise("an **8x** saving")
+    assert "a factor 73 between" in normalise("a factor 73\nbetween")
+    assert "the paper beats ours" in normalise(r"the \textbf{paper} beats ours")
+
+
 def test_no_superseded_figures_survive_in_the_prose():
-    """Values from earlier versions of the experiment must not linger."""
+    """Values from earlier states of the experiment must not linger anywhere."""
     stale = {
         "an 8x saving": "the headline is 5.3x, against either baseline",
+        "5.6 and 4.7 times": "the m=25 factors are 6.1x and 5.1x",
         "5.6x more accurate": "the m=25 factors are 6.1x and 5.1x",
-        "factor of three across seeds": "the seed spread is 3.5",
-        "The paper's simpler architecture beats ours": (
-            "the three VAE priors are statistically indistinguishable"
-        ),
-        "factor 73": "the cost ratio is 102",
+        "factor 73": "the cost ratio is 103",
+        "73x gap": "the cost ratio is 103",
         "swept over six values": "the shrinkage sweep covers eight values, per budget",
+        "simpler architecture beats ours": "the three VAE priors are indistinguishable",
+        "simpler network beats ours": "the three VAE priors are indistinguishable",
+        "simplest of the three generators was the best": (
+            "the three VAE priors are indistinguishable"
+        ),
+        "at or below 0.004": "no comparison among the VAE priors is significant",
+        "p = 0.028": "no comparison among the VAE priors is significant",
+        "factor of three across seeds": "the seed spread is 3.5",
     }
-    files = [
-        ROOT_DIR / "README.md",
-        ROOT_DIR / "docs" / "presentation_outline.md",
-        ROOT_DIR / "docs" / "model_selection.md",
-        *REPORT.glob("*.tex"),
-    ]
-    for path in files:
-        text = path.read_text(encoding="utf-8")
+    for path in DOCUMENTS + list(REPORT.glob("*.tex")):
+        text = normalise(path.read_text(encoding="utf-8"))
         for phrase, why in stale.items():
             assert phrase not in text, f"{path.name} still contains {phrase!r}: {why}"
+
+
+def test_the_headline_figures_appear_in_every_write_up(means, benchmark):
+    """The saving and the m=25 factor are recomputed and looked for by value.
+
+    A blacklist only catches values someone thought to list. These are the two
+    figures every write-up leads with, so they are checked positively instead.
+    """
+    wide = benchmark.pivot_table(index=["m", "image"], columns="method", values="per_pixel_error")
+    target = wide.loc[REFERENCE_M, REFERENCE].mean()
+    needed = min(int(means[p].index[means[p] <= target].min()) for p in PRIORS[:3])
+    saving = REFERENCE_M / needed
+
+    best25 = means.loc[25, PRIORS].min()
+    factor = means["lasso-dct"][25] / best25
+
+    for path in [ROOT_DIR / "README.md", ROOT_DIR / "docs" / "presentation_outline.md"]:
+        text = normalise(path.read_text(encoding="utf-8"))
+        assert f"{saving:.1f}x" in text, f"{path.name} is missing the {saving:.1f}x saving"
+        assert f"{factor:.1f}" in text, f"{path.name} is missing the {factor:.1f} factor at m=25"
+
+
+def test_the_recorded_revision_is_in_the_history():
+    """A run records the revision it came from; that pointer has to resolve.
+
+    Rewriting commit messages changes every hash, which silently orphans the
+    provenance recorded by an earlier run.
+    """
+    for name in ("benchmark_meta.json", "unregularised/benchmark_meta.json"):
+        path = RESULTS_DIR / name
+        if not path.exists():
+            continue
+        revision = json.loads(path.read_text(encoding="utf-8")).get("git_revision")
+        if revision in (None, "unknown"):
+            continue
+        resolved = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", revision, "HEAD"], cwd=ROOT_DIR
+        )
+        assert resolved.returncode == 0, (
+            f"{name} records revision {revision}, which is not in the history"
+        )
