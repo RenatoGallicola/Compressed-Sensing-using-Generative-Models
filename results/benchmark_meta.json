@@ -57,7 +57,7 @@
     "vae-20",
     "vae-30"
   ],
-  "git_revision": "404ce81",
+  "git_revision": "8a0f40b",
   "checkpoints": {
     "lasso": "lasso",
     "lasso-dct": "lasso-dct",
