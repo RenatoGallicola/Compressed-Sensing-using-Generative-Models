@@ -283,17 +283,18 @@ afterwards, is in [`docs/model_selection.md`](docs/model_selection.md).
 ├── scripts/                   command-line entry points
 │   ├── train_vae.py             train the VAE, save the decoder
 │   ├── train_dcgan.py           train the DCGAN, save the generator
+│   ├── select_dcgan.py          picks a generator on held-out data
 │   ├── run_benchmark.py         the full sweep -> results/benchmark.csv
 │   ├── run_lambda_sweep.py      sensitivity to the latent regulariser
 │   ├── tune_lasso.py            picks the baseline's basis and shrinkage
+│   ├── run_stats.py             paired significance tests -> significance.md
 │   └── make_figures.py          csv -> figures and summary tables
 ├── notebooks/                 narrated walkthrough (01 VAE, 02 DCGAN, 03 Lasso, 04 recovery)
 ├── models/                    pre-trained checkpoints (k = 20 and k = 30)
 ├── results/                   benchmark table, summary tables and figures
 ├── docs/
-│   ├── report/                  LaTeX source of the report
 │   ├── figures/                 figures used in the docs
-│   ├── model_selection.md       how the VAE checkpoints were chosen
+│   ├── model_selection.md       how each checkpoint was chosen
 │   ├── presentation_outline.md  slide-by-slide outline of the talk
 │   └── report/                  LaTeX source of the write-up
 └── tests/                     pytest suite covering the package
@@ -340,15 +341,20 @@ print(f"per-pixel error: {per_pixel_l2(result.x_hat, x_star)[0]:.4f}")
 python scripts/train_vae.py   --latent-dim 20 --seed 1          # convolutional
 python scripts/train_vae.py   --latent-dim 20 --architecture fc # paper's network
 python scripts/train_dcgan.py --latent-dim 20 --epochs 50
+python scripts/select_dcgan.py --latent-dim 20  # a GAN has no validation loss
 
-# 2. sweep every prior over every measurement budget  (~3 h on CPU)
+# 2. sweep every prior over every measurement budget  (~3.8 h on CPU)
 python scripts/tune_lasso.py          # pick the baseline's shrinkage first
 python scripts/run_benchmark.py --n-images 10 --steps 1000 --restarts 10 --l2-penalty 0.1
 
-# 3. how much the latent regulariser matters (VAE decoders only, ~30 min)
+# 3. the same sweep with the regulariser removed  (~2.9 h)
+python scripts/run_benchmark.py --l2-penalty 0 --output-dir results/unregularised
+
+# 4. how much the latent regulariser matters (VAE decoders only, ~30 min)
 python scripts/run_lambda_sweep.py
 
-# 4. turn the raw tables into figures and summary tables
+# 5. the paired significance tests, and the figures and summary tables
+python scripts/run_stats.py
 python scripts/make_figures.py
 ```
 
