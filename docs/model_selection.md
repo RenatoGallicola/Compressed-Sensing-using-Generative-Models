@@ -2,7 +2,9 @@
 
 Written before running the experiments it describes, so that the rules cannot be
 adjusted once the numbers are known. The commit that fixes each set of rules
-precedes the commit that adds the checkpoints it governs.
+precedes the commit that adds the checkpoints it governs, with one exception
+stated at the top of the DCGAN section: the two GAN checkpoints currently in
+`models/` predate these rules and do not follow them.
 
 ## Why this exists
 
@@ -27,7 +29,10 @@ Those figures were measured on ten test digits, and they are what prompted the
 intervention below. That is a decision informed by test-set behaviour, and it is
 recorded here rather than left implicit. What it does not affect is which
 checkpoint is used: no rule below consults the test split or the benchmark, so
-the models being compared were never chosen on the data they are scored on.
+no model was ever *chosen* on the data it is scored on. That is a statement about
+selection. It is not a statement about training, and it does not cover the two
+GAN checkpoints in use, which were trained on the test split before it was held
+out.
 
 ## The intervention
 
@@ -58,6 +63,15 @@ The ramp length is fixed at 10 epochs and is not tuned, for any architecture.
 5. **The outcome is reported as measured.**
 
 ## The rules for the DCGAN, fixed in advance
+
+**The two GAN generators in `models/` do not follow any of the rules below.**
+They were trained before these rules existed: on the training and test splits
+together, with the optimiser settings the script used before it was aligned with
+the reference paper, and with no selection among seeds or epochs. They are the
+generators behind the two DCGAN columns of the published benchmark, which is why
+those columns are reported with the limitation stated in the README rather than
+presented as a clean held-out measurement. The rules below govern the retraining,
+not the results as they stand.
 
 A GAN has no likelihood, so none of rule 2 above transfers: there is no
 validation loss, no stopping criterion, and sample quality oscillates from epoch
@@ -152,6 +166,9 @@ runs in the DCGAN's favour by roughly the margin seen here.
 
 ### DCGAN
 
-To be recorded when the runs described above have finished, from
+Not yet recorded. The runs the rules above describe have not been carried out,
+and the generators currently in `models/` are the earlier ones described at the
+top of that section. When the runs finish, the outcome comes from
 `models/dcgan_selection_dim20.txt` and `models/dcgan_selection_dim30.txt`, which
-`scripts/select_dcgan.py` writes.
+`scripts/select_dcgan.py` writes, and the two DCGAN columns of the benchmark are
+recomputed from the selected checkpoints.

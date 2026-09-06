@@ -5,9 +5,11 @@ English to match the report; the talk can be given in either language. Slide 14
 is the one to drop if you are running short.
 
 Each entry lists what goes on the slide, which figure to use, and what to say.
-Figure paths are relative to the repository root. Every number quoted here comes
-from `results/benchmark.csv` and the tables generated from it, except those on
-slide 16, which come from `docs/model_selection.md`.
+Figure paths are relative to the repository root. Numbers quoted here come from
+`results/benchmark.csv` and the tables generated from it, except the regulariser
+figures on slide 14, which come from `results/unregularised/` and
+`results/lambda_sweep.csv`, and the training-variance figures on slide 16, which
+come from `docs/model_selection.md`.
 
 ---
 
@@ -199,7 +201,7 @@ bottleneck is no longer information, it is that the true digit is not in the
 range of G, and that distance does not depend on the budget. From 500
 measurements both baselines overtake everything, and at 750 the pixel one
 recovers the digits almost exactly while the priors stay put. The paper says the
-reversal takes more than 500 measurements; we see it from 500 onwards. A factor 3.4 separates the best floor
+reversal takes more than 500 measurements; we see it from 500 onwards. A factor 3.3 separates the best floor
 from the worst, so on this side of the plot the generator matters far more than
 the recovery algorithm.
 
@@ -217,9 +219,11 @@ comparisons are paired and we test them that way.
   any budget: every corrected p-value is 1. Their floors span 0.0006 and ten
   images cannot separate that. Say this plainly; do not rank them from the
   table.
-- **Every prior beats both baselines in the middle of the range and loses at
-  750.** That crossover is the reproduction, and it is the claim that survives
-  correction.
+- **Every prior beats both baselines at 100 measurements and loses to both at
+  750.** That crossover is the reproduction and it is the claim that survives
+  correction. Be precise if pressed: 100 is the only budget where it holds for
+  all five priors at once, because the two DCGAN columns drop out elsewhere.
+  Each VAE on its own is significantly better from 25 to 300.
 - **The VAE beats the DCGAN at k=30 clearly, at k=20 only at one budget** under
   the penalty the main table uses. Worth knowing if asked: with the penalty
   removed the k=20 comparison becomes significant at eight budgets out of ten.
@@ -337,16 +341,19 @@ Representation error, slide 12. Lasso has no equivalent ceiling.
 The selection uses the measurement error, computable from y alone. No ground
 truth is involved, so the same rule works when the true image is unknown.
 
-**Why is the paper's simpler network better than yours?**
-We do not know, and we say so. Two candidate explanations: our decoder devotes
-far fewer parameters to the output layer, and its spatial inductive bias may be
-the wrong one for a manifold this simple. Separating them is future work.
+**Which of the three VAE architectures is best?**
+This experiment cannot say. With ten test images no comparison among them is
+significant at any budget, and their error floors span 0.0006. If pressed on why
+we cannot separate them: the sample is ten images, not that the models are
+provably equal. More images would settle it, and the cost is recovery time.
 
 **Ten test images is not many.**
-Correct, and slide 13 says which comparisons survive and which do not: the ones
-between generative priors from 75 measurements up, the VAE against the DCGAN at
-10 and 50 but not in between. The cost of more images is the DCGAN recovery,
-about 500 seconds per budget.
+Correct, and slide 13 says which comparisons survive and which do not. What
+survives is the crossover: every prior beats both baselines at 100 measurements
+and loses to both at 750. What does not survive is any ranking among the three
+VAEs, at any budget. Against the DCGAN at `k=30` the VAEs win almost everywhere;
+against `k=20` only at one budget under the penalty the table uses. The cost of
+more images is the DCGAN recovery, about 670 seconds per budget.
 
 **What does the theoretical guarantee actually require?**
 That G is L-Lipschitz and that A is random Gaussian. It bounds the error

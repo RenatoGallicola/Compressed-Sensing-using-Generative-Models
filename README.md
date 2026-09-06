@@ -139,7 +139,7 @@ that the low-budget comparisons can be read for what they are.
 ### Three regimes
 
 **Scarce measurements.** Every VAE prior beats both baselines up to 400
-measurements, and the DCGAN at `k=20` up to 300. The DCGAN at `k=30` is the
+measurements, and so does the DCGAN at `k=20`. The DCGAN at `k=30` is the
 exception and is beaten by the DCT baseline from 300 up. At 25 measurements the
 best prior is 5.1x more accurate than the DCT baseline, at a budget where
 neither baseline returns anything recognisable as a digit. The ratio against the
@@ -188,8 +188,15 @@ difference significant in every one. In the other direction the picture is
 narrower than the means suggest: 100 measurements is the only budget at which
 every prior beats every baseline significantly at once, because the two DCGAN
 columns drop out at several budgets. Each VAE prior on its own is significantly
-better than both baselines from 25 to 300. Corrected p-values run to 0.04 where
-these hold.
+better than both baselines from 25 to 300. The largest corrected p-value among these is 0.0195,
+which is also the smallest attainable: with ten paired samples Wilcoxon bottoms
+out at 0.00195 and the correction across ten budgets multiplies that by ten.
+
+The correction is applied within each pair of methods across the ten budgets,
+which is the family a claim like "significant from 75 up" spans. That choice is
+load bearing rather than a formality: the table holds 200 tests in 20 such
+families, and correcting across all 200 would put the floor at 0.39, under which
+nothing here would be significant.
 
 These tests are conditional on one measurement matrix per budget. The pairing
 across images is real, but ten images under a single draw of `A` is not ten
@@ -310,14 +317,17 @@ Reconstruct a digit from 100 measurements, 13% of its 784 pixels:
 
 ```python
 from csgm import gaussian_measurement_matrix, load_mnist, measure, per_pixel_l2, recover
+from csgm.config import NOISE_SEED_OFFSET
 from csgm.models import load_generator
 
 (_, _), (x_test, _) = load_mnist(flatten=True)
 x_star = x_test[0]
 
-G = load_generator("dcgan", latent_dim=20)
+G = load_generator("vae", latent_dim=20)
 A = gaussian_measurement_matrix(m=100, n=784, seed=0)
-y = measure(x_star, A, noise_std=0.01, seed=0)
+# The noise gets its own stream: seeding it like A would make it a rescaled
+# copy of A's first rows rather than an independent draw.
+y = measure(x_star, A, noise_std=0.01, seed=NOISE_SEED_OFFSET)
 
 result = recover(G, y, A, latent_dim=20)
 print(f"per-pixel error: {per_pixel_l2(result.x_hat, x_star)[0]:.4f}")
@@ -458,11 +468,16 @@ which checkpoint was kept, and the reasoning is in
   on CPU, which is why the columns are published with this caveat rather than
   quietly dropped.
 - **The two model families receive different selection budgets.** The VAEs are
-  the better of two seeds chosen on held-out validation loss; the DCGANs are
-  single runs. Their checkpoints are also chosen on different criteria, and the
-  DCGAN's is the one better aligned with what the benchmark measures. Both the
-  rules and the measured size of that asymmetry are in
+  the better of two seeds chosen on held-out validation loss. The DCGANs are
+  single runs with no selection of any kind, neither across seeds nor across
+  epochs, so their columns are one draw from a distribution this project has
+  itself shown to be wide. The rules that will govern their retraining, and the
+  measured size of the criterion difference those rules introduce, are in
   [`docs/model_selection.md`](docs/model_selection.md).
+- **The DCGAN columns carry a latent penalty chosen for a different model.**
+  The table uses $\lambda = 0.1$ throughout, which Bora et al. report for their
+  MNIST VAE. The only value they give for a DCGAN is 0.001, on another dataset.
+  How much the VAE-against-DCGAN comparison depends on this is reported above.
 - **The error bars describe image-to-image spread.** One measurement matrix is
   drawn per budget, so the intervals say nothing about how much the curves would
   move under a different draw of `A`.

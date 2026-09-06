@@ -25,6 +25,9 @@
 | `summary.md`, `summary.csv` | mean per-pixel error per method and budget |
 | `sample_efficiency.md` | measurements each prior needs to match Lasso at m = 400 |
 
-`benchmark.csv` and `summary.*` are committed so the numbers can be checked
-without re-running the sweep; `reconstructions.npz` is not, since it is bulky
-and fully reproducible from the seed recorded in the README.
+Everything here is committed, including `reconstructions.npz` and the
+significance tables, so that every number in the write-ups can be checked without
+re-running the sweep. Each row of `benchmark.csv` also carries the hash of the
+checkpoint and the git revision that produced it, and
+`tests/test_reported_numbers.py` fails if either stops matching what is in
+`models/` or in the history.
