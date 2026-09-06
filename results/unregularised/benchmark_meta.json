@@ -7,7 +7,33 @@
     "l2_penalty": 0.0,
     "noise_norm": 0.1,
     "noise_std": null,
-    "lasso_alpha": 1e-05,
+    "lasso_alpha": "per budget",
+    "lasso_alpha_table": {
+      "pixel": {
+        "10": 0.0001,
+        "25": 0.1,
+        "50": 1e-05,
+        "75": 1e-05,
+        "100": 1e-05,
+        "200": 1e-05,
+        "300": 1e-05,
+        "400": 1e-05,
+        "500": 1e-06,
+        "750": 1e-06
+      },
+      "dct": {
+        "10": 0.0001,
+        "25": 1e-05,
+        "50": 1e-05,
+        "75": 1e-05,
+        "100": 1e-05,
+        "200": 1e-06,
+        "300": 1e-06,
+        "400": 1e-06,
+        "500": 1e-06,
+        "750": 1e-06
+      }
+    },
     "seed": 1337,
     "m_values": [
       10,
@@ -30,5 +56,15 @@
     "lasso-dct",
     "vae-20",
     "vae-30"
-  ]
+  ],
+  "git_revision": "b095f15",
+  "checkpoints": {
+    "lasso": "lasso",
+    "lasso-dct": "lasso-dct",
+    "vae-20": "43be5f2255e1",
+    "vae-30": "cd86042422b6",
+    "fcvae-20": "8ef39c72e3c4",
+    "dcgan-20": "dd39a36dc906",
+    "dcgan-30": "fd24bfe7e7b4"
+  }
 }

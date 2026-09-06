@@ -1,17 +1,37 @@
-# Sample efficiency against Lasso (DCT basis) at m = 400
+# Sample efficiency at m = 400
 
-That baseline reaches a mean per-pixel error of 0.0117 with 400 measurements (median 0.0124, largest 0.0169).
-For each prior, the smallest budget whose mean error is at or below that level,
-and how many of the individual test images it beats there.
+For each prior, the smallest budget whose mean error is at or below the
+level a baseline reaches with 400 measurements, and how many of the individual test images
+it beats there. The comparison is given against both baselines, since the
+speed-up depends on which one is used as the reference.
+
+## Against Lasso (DCT basis)
+
+Mean per-pixel error 0.0115 at 400 measurements (median 0.0113, largest 0.0151, 0 of 10 images below 0.001).
 
 | prior | measurements needed | speed-up | images beaten |
 |---|---|---|---|
-| VAE, paper architecture, k=20 | 50 | 8.0x | 8 of 10 |
-| VAE, k=20 | 75 | 5.3x | 5 of 10 |
-| VAE, k=30 | 75 | 5.3x | 7 of 10 |
+| VAE, paper architecture, k=20 | 75 | 5.3x | 8 of 10 |
+| VAE, k=20 | 75 | 5.3x | 8 of 10 |
+| VAE, k=30 | 75 | 5.3x | 9 of 10 |
 | DCGAN, k=20 | 200 | 2.0x | 8 of 10 |
 | DCGAN, k=30 | never, in the sweep | n/a | n/a |
 
-## Why not Lasso (pixel basis)
+## Against Lasso (pixel basis)
 
-At 400 measurements its error is 0.0108 on average but 0.0005 at the median, with 6 of 10 images already below 0.001 and the worst at 0.0842. It is midway through the transition from failure to near-exact recovery, so its mean at this budget is set by the digits it has not solved and is not a level worth comparing against.
+Mean per-pixel error 0.0107 at 400 measurements (median 0.0003, largest 0.0834, 6 of 10 images below 0.001).
+
+| prior | measurements needed | speed-up | images beaten |
+|---|---|---|---|
+| VAE, paper architecture, k=20 | 75 | 5.3x | 1 of 10 |
+| VAE, k=20 | 75 | 5.3x | 1 of 10 |
+| VAE, k=30 | 75 | 5.3x | 1 of 10 |
+| DCGAN, k=20 | 200 | 2.0x | 1 of 10 |
+| DCGAN, k=30 | never, in the sweep | n/a | n/a |
+
+## The level of a blank image
+
+Predicting an all-zero image scores 0.1178 per pixel on these digits, which is the error any method has to beat before it can be said to be reconstructing anything.
+
+The pixel-basis baseline is at or above that level at m = 10, 25. A speed-up quoted against it at those budgets is a comparison against a blank image, so the DCT baseline is the meaningful reference there.
+
