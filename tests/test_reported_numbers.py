@@ -233,9 +233,14 @@ def test_quoted_recovery_costs(benchmark):
     assert seconds["lasso"] == pytest.approx(1.5, abs=0.3)
     assert seconds["lasso-dct"] == pytest.approx(1.5, abs=0.3)
     assert seconds["fcvae-20"] == pytest.approx(6.6, abs=0.5)
-    assert seconds[["dcgan-20", "dcgan-30"]].mean() / seconds["fcvae-20"] == pytest.approx(
-        102, abs=6
-    )
+
+    # The prose calls this the gap between the cheapest and the dearest learned
+    # prior, so the test has to measure that and not an average over the two
+    # DCGANs, which is a different number.
+    ratio = seconds[PRIORS].max() / seconds[PRIORS].min()
+    assert round(ratio) == 103
+    for path in (ROOT_DIR / "README.md", REPORT / "conclusions.tex", REPORT / "summary.tex"):
+        assert "103" in path.read_text(encoding="utf-8"), f"{path.name} quotes another ratio"
 
 
 def test_lambda_sweep_endpoints():
@@ -359,3 +364,65 @@ def test_the_recorded_revision_is_in_the_history():
         assert resolved.returncode == 0, (
             f"{name} records revision {revision}, which is not in the history"
         )
+
+
+def test_bold_marks_the_best_method_in_the_readme(means):
+    """The README table bolds a winner too, and it has to be the row minimum."""
+    body = (ROOT_DIR / "README.md").read_text(encoding="utf-8")
+    body = body[body.index("|   m | Lasso (pixel)") :]
+    order = ["lasso", "lasso-dct", "fcvae-20", "vae-20", "vae-30", "dcgan-20", "dcgan-30"]
+
+    rows = 0
+    for line in body.splitlines()[2:]:
+        if not line.startswith("|"):
+            break
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        m = int(cells[0])
+        bolded = [order[i] for i, c in enumerate(cells[1:]) if "**" in c]
+        best = means.loc[m, order].idxmin()
+        assert bolded == [best], f"README row m={m}: bold on {bolded}, best is {best}"
+        rows += 1
+    assert rows == 10
+
+
+def test_the_sample_efficiency_prose_covers_every_prior(means, benchmark):
+    """Not only the VAEs: the DCGAN budgets are quoted too and must be right."""
+    wide = benchmark.pivot_table(index=["m", "image"], columns="method", values="per_pixel_error")
+    target = wide.loc[REFERENCE_M, REFERENCE].mean()
+    readme = normalise((ROOT_DIR / "README.md").read_text(encoding="utf-8"))
+
+    matching = means["dcgan-20"].index[means["dcgan-20"] <= target]
+    assert len(matching), "dcgan-20 no longer reaches the reference level"
+    needed = int(matching.min())
+    assert f"DCGAN at k=20 needs {needed}" in readme, (
+        f"the README should say the DCGAN at k=20 needs {needed} measurements"
+    )
+
+    assert means["dcgan-30"].min() > target, "dcgan-30 now reaches the reference level"
+    assert "at k=30 it never reaches the level" in readme
+
+
+def test_the_unregularised_comparison_is_quoted_correctly():
+    """The regulariser paragraph and the k=20 caveat rest on the second sweep."""
+    path = RESULTS_DIR / "unregularised" / "benchmark.csv"
+    if not path.exists():
+        pytest.skip("the unregularised sweep is not present")
+    unregularised = pd.read_csv(path).pivot_table(
+        index="m", columns="method", values="per_pixel_error"
+    )
+    regularised = pd.read_csv(RESULTS_DIR / "benchmark.csv").pivot_table(
+        index="m", columns="method", values="per_pixel_error"
+    )
+
+    documents = [
+        normalise((ROOT_DIR / "README.md").read_text(encoding="utf-8")),
+        normalise((REPORT / "results.tex").read_text(encoding="utf-8")),
+    ]
+    for m in (10, 750):
+        with_penalty = regularised.loc[m, PRIORS].min()
+        without = unregularised.loc[m, PRIORS].min()
+        for text in documents:
+            assert f"{without:.4f}" in text, f"the lambda=0 error at m={m} is {without:.4f}"
+            assert f"{with_penalty:.4f}" in text, (
+                f"the lambda=0.1 error at m={m} is {with_penalty:.4f}"
+            )
