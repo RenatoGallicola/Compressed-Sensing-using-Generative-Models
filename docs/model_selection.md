@@ -121,6 +121,35 @@ budget:
 Rule 2 selects seed 1 in all three cases. The losses are comparable across
 configurations, since the objective and the validation images are the same.
 
+### Does the criterion matter
+
+Rule 6 of the DCGAN section requires the size of the criterion asymmetry to be
+measured rather than asserted. Applying the DCGAN's criterion to the VAE seeds
+afterwards, on the same held-out training images, 32 of them:
+
+| run | validation loss | representation error | selected by rule 2 |
+|---|---|---|---|
+| convolutional `k=20`, seed 1 | **96.63** | **0.00655** | yes |
+| convolutional `k=20`, seed 2 | 106.70 | 0.01628 | |
+| convolutional `k=30`, seed 1 | **96.25** | **0.00618** | yes |
+| convolutional `k=30`, seed 2 | 99.76 | 0.00813 | |
+| fully connected `k=20`, seed 1 | **97.18** | 0.00636 | yes |
+| fully connected `k=20`, seed 2 | 97.32 | **0.00531** | |
+
+The two criteria agree for both convolutional models and disagree for the fully
+connected one, where the validation losses are separated by 0.15 and the
+representation errors by 20 per cent. The reading is that validation loss orders
+runs reliably when they are far apart and carries little information about
+recovery quality when they are close.
+
+The consequence is kept rather than undone: rule 2 selected a generator whose
+representation error is 0.00636 when a run scoring 0.00531 was available. The
+better model is not substituted, because choosing it now would be selection on a
+criterion picked after seeing which answer it gives, which is what rules 3 and 4
+exist to prevent. It also means the DCGAN's criterion is the better aligned of
+the two with what the benchmark measures, so the asymmetry recorded in rule 6
+runs in the DCGAN's favour by roughly the margin seen here.
+
 ### DCGAN
 
 To be recorded when the runs described above have finished, from
