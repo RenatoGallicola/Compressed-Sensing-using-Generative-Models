@@ -29,3 +29,7 @@ Thumbs.db
 # results can be inspected without re-running the 3-hour sweep.
 results/samples/
 models/*_history.npz
+
+# Per-epoch generators kept only until scripts/select_dcgan.py has chosen one.
+# The choice and every candidate score are recorded in models/dcgan_selection_dim*.txt.
+models/dcgan_checkpoints/
