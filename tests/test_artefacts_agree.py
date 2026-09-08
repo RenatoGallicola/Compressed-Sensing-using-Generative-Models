@@ -253,3 +253,31 @@ def test_the_benchmark_defaults_produce_the_committed_protocol():
             f"committed sweep was run with {recorded[field]}"
         )
     assert sorted(args.m_values) == recorded["m_values"]
+
+
+def test_the_report_figures_are_the_generated_ones():
+    """The report embeds copies of results/figures, which have to be current.
+
+    Regenerating the figures leaves the copies under docs/report/assets untouched,
+    so the document can end up plotting one experiment beside a table describing
+    another, with nothing else in the suite noticing.
+    """
+    generated = ROOT_DIR / "results" / "figures"
+    embedded = ROOT_DIR / "docs" / "report" / "assets"
+    if not generated.exists() or not embedded.exists():
+        pytest.skip("figures are not present")
+
+    stale = []
+    for figure in sorted(generated.glob("*.png")):
+        copy = embedded / figure.name
+        if not copy.exists():
+            continue
+        if (
+            hashlib.sha256(figure.read_bytes()).digest()
+            != hashlib.sha256(copy.read_bytes()).digest()
+        ):
+            stale.append(figure.name)
+    assert not stale, (
+        f"docs/report/assets is behind results/figures for {stale}; "
+        "copy the regenerated figures across"
+    )

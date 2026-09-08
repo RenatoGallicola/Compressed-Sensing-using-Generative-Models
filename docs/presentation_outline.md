@@ -223,14 +223,16 @@ comparisons are paired and we test them that way.
   table.
 - **Every prior beats both baselines at 100 measurements and loses to both at
   750.** That crossover is the reproduction and it is the claim that survives
-  correction. Be precise if pressed: 100 is the only budget where it holds for
-  all five priors at once, because the two DCGAN columns drop out elsewhere.
+  correction. Be precise if pressed: 50, 75, 100 and 300 are the budgets where it
+  holds for all five priors at once, because the two DCGAN columns drop out
+  elsewhere.
   Each VAE on its own is significantly better from 25 to 300.
 - **The VAE beats the DCGAN at `k=20` at nine budgets out of ten, and at `k=30`
-  only while measurements are scarce.** From 300 up the DCGAN at `k=30` has the
-  lower mean error, though not significantly so. If asked whether the penalty is
-  unfair to the GANs: we ran them at 0.001 too, the value the paper gives for a
-  DCGAN, and it does not help, so the answer is no.
+  only while measurements are scarce.** Every VAE has the lower mean error than
+  every DCGAN from 50 measurements up; against `k=30` ten images are not enough to
+  prove it beyond the low budgets. If asked whether the penalty is unfair to the
+  GANs: we ran them at 0.001 too, the value the paper gives for a DCGAN, and it
+  does not help, so the answer is no.
 
 Saying out loud which differences do not reach significance is worth more than
 claiming five results and defending three.
@@ -353,11 +355,12 @@ provably equal. More images would settle it, and the cost is recovery time.
 
 **Ten test images is not many.**
 Correct, and slide 13 says which comparisons survive and which do not. What
-survives is the crossover: every prior beats both baselines at 100 measurements
-and loses to both at 750. What does not survive is any ranking among the three
-VAEs, at any budget. Against the DCGAN at `k=30` the VAEs win almost everywhere;
-against `k=20` only at one budget under the penalty the table uses. The cost of
-more images is the DCGAN recovery, about 670 seconds per budget.
+survives is the crossover: every prior beats both baselines at 50, 75, 100 and
+300 measurements and loses to both at 750. What does not survive is any ranking
+among the three VAEs, at any budget. Against the DCGAN at `k=20` the VAEs win at
+nine budgets out of ten; against `k=30` only at the low budgets, though their
+mean error is lower everywhere from 50 up. The cost of
+more images is the DCGAN recovery, about 600 seconds per budget.
 
 **What does the theoretical guarantee actually require?**
 That G is L-Lipschitz and that A is random Gaussian. It bounds the error
@@ -365,10 +368,9 @@ relative to the best reconstruction inside the range of G, so it does not
 promise exact recovery, only that we approach the best the generator can do.
 
 **Did you retrain everything?**
-The VAEs yes, with the procedure and the selection rule recorded in the
-repository. The DCGANs no: about ten hours each on CPU. So the variance analysis
-covers the VAEs only, and the same effect may well be present in the DCGAN
-checkpoints.
+Yes. Six VAE runs and two DCGAN runs, each following the protocol and the
+selection rule recorded in the repository, the DCGANs at some fifteen hours each
+on CPU.
 
 **Could you learn the measurement matrix?**
 Yes, and it is the natural next step. The guarantee relies on the randomness of

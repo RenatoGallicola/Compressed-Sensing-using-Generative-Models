@@ -139,8 +139,8 @@ that the low-budget comparisons can be read for what they are.
 ### Three regimes
 
 **Scarce measurements.** Every VAE prior beats both baselines up to 400
-measurements, and so does the DCGAN at `k=30`; the DCGAN at `k=20` does so up to
-300. At 25 measurements the
+measurements, and so does the DCGAN at `k=30` from 25 up, the DCT baseline
+edging it at 10. The DCGAN at `k=20` beats both from 10 to 300. At 25 measurements the
 best prior is 5.1x more accurate than the DCT baseline, at a budget where
 neither baseline returns anything recognisable as a digit. The ratio against the
 pixel baseline is 6.1x, but that one is at the blank-image level here, so the DCT
@@ -187,9 +187,9 @@ are in [`results/significance.md`](results/significance.md), produced by
 **Generative priors beat sparse recovery, and then lose to it.** At 750
 measurements all ten prior-and-baseline pairs put the baseline ahead, with the
 difference significant in every one. In the other direction the picture is
-narrower than the means suggest: 100 measurements is the only budget at which
-every prior beats every baseline significantly at once, because the two DCGAN
-columns drop out at several budgets. Each VAE prior on its own is significantly
+narrower than the means suggest: 50, 75, 100 and 300 are the only budgets at
+which every prior beats every baseline significantly at once, because the two
+DCGAN columns drop out elsewhere. Each VAE prior on its own is significantly
 better than both baselines from 25 to 300. The largest corrected p-value among these is 0.0195,
 which is also the smallest attainable: with ten paired samples Wilcoxon bottoms
 out at 0.00195 and the correction across ten budgets multiplies that by ten.
@@ -215,13 +215,13 @@ the table would be noise.
 
 **The VAE family beats the DCGAN at `k=20` everywhere, and at `k=30` only when
 measurements are scarce.** Against `dcgan-20` every VAE is significantly more
-accurate at nine of the ten budgets. Against `dcgan-30` the advantage holds from
-10 to 75 measurements and then stops: from 300 up that generator has a lower mean
-error than any VAE, 0.0085 against 0.0069 at 750, though the difference does not
-reach significance with ten images. The two DCGANs differ from each other by more
-than either differs from a VAE at the high budgets, which is a statement about
-how much a single adversarial training run varies rather than about the
-architecture.
+accurate at nine of the ten budgets. Against `dcgan-30` the advantage is
+significant only while measurements are scarce, at three or four budgets
+depending on the VAE, and elsewhere the difference is real but too small for ten
+images to establish: at 750 measurements `dcgan-30` sits at 0.0085 against 0.0069
+for the best VAE. Every VAE has a lower mean error than every DCGAN at every
+budget from 50 up; what changes with `dcgan-30` is only whether ten images can
+prove it.
 
 **The latent penalty is not what separates the families.** The table uses
 $\lambda = 0.1$, the value Bora et al. report for their MNIST VAE, while the only
@@ -476,7 +476,8 @@ which checkpoint was kept, and the reasoning is in
   seeds, while a DCGAN run costs about fifteen hours of CPU against forty minutes
   for a VAE, so each DCGAN is a single seed whose best epoch is kept. Their
   columns are therefore one draw from a distribution this project has shown to be
-  wide: the two DCGANs differ from each other by more than the three VAEs do. The
+  wide: the two DCGANs differ from each other by five times what separates the
+  three VAEs, 0.0027 against 0.0005 in the error floor. The
   criteria also differ, on the ELBO for the VAE and on representation error for
   the DCGAN, and the size of that difference is measured in
   [`docs/model_selection.md`](docs/model_selection.md).

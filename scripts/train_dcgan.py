@@ -71,9 +71,9 @@ def parse_args() -> argparse.Namespace:
         "--include-test-split",
         action="store_true",
         help=(
-            "also train on the test images, as the original run of this project did. "
-            "It leaks the evaluation set into the prior and is kept only to reproduce "
-            "the shipped checkpoints"
+            "also train on the test images. It leaks the evaluation set into the prior, "
+            "so no shipped checkpoint uses it; the flag exists only to reproduce that "
+            "mistake deliberately"
         ),
     )
     parser.add_argument(
