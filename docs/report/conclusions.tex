@@ -18,7 +18,7 @@ This project assessed the performance of compressed sensing with generative prio
     \item \textbf{The comparison among the VAE priors is not resolved by this experiment:}
     \begin{itemize}
         \item The fully connected network of the reference paper, our convolutional VAE with \( k = 20 \) and our convolutional VAE with \( k = 30 \) are statistically indistinguishable. With ten test images no comparison among the three reaches significance at any budget once corrected, and their error floors span 0.0005. We report this as an absence of evidence rather than as a ranking, and we note that we had expected to be able to order them.
-        \item The two DCGANs take turns as the least accurate prior, the one with latent dimension 30 at the smallest budgets and the one with latent dimension 20 from three hundred upwards, and neither matches a VAE at any budget from fifty on. Both are by far the most expensive, about 93 times the cost of the fully connected decoder per reconstruction, so on this dataset there is no trade-off to arbitrate: the cheapest generative prior is also among the most accurate ones.
+        \item The two DCGANs are the two least accurate priors at every budget, taking turns as the very worst, and neither matches a VAE anywhere in the sweep. Both are by far the most expensive, about 93 times the cost of the fully connected decoder per reconstruction, so on this dataset there is no trade-off to arbitrate: the cheapest generative prior is also among the most accurate ones.
     \end{itemize}
     \item \textbf{The training procedure is part of the result:}
     \begin{itemize}

@@ -221,7 +221,7 @@ on the VAE: four for `k=30`, three for the paper architecture, one for `k=20`.
 Elsewhere the difference is real but too small for ten
 images to establish: at 750 measurements `dcgan-30` sits at 0.0085 against 0.0069
 for the best VAE. Every VAE has a lower mean error than every DCGAN at every
-budget from 50 up; what changes with `dcgan-30` is only whether ten images can
+budget in the sweep; what changes with `dcgan-30` is only whether ten images can
 prove it.
 
 **The latent penalty is not what separates the families.** The table uses
@@ -264,7 +264,7 @@ do not explain that: the DCGAN generator is only 4.5x larger than the paper's
 decoder, and our convolutional decoder is *smaller* than it yet twice as slow.
 What the cost tracks is arithmetic per forward pass, and the DCGAN applies
 transposed convolutions with 256 and 512 channels at nearly full resolution. The
-most expensive prior is also the least accurate at almost every budget, so on
+two most expensive priors are also the two least accurate, at every budget, so on
 this dataset there is no trade-off to arbitrate.
 
 ### Training variance is part of the result
@@ -353,11 +353,11 @@ python scripts/train_vae.py   --latent-dim 20 --architecture fc # paper's networ
 python scripts/train_dcgan.py --latent-dim 20 --epochs 50
 python scripts/select_dcgan.py --latent-dim 20  # a GAN has no validation loss
 
-# 2. sweep every prior over every measurement budget  (~3.8 h on CPU)
+# 2. sweep every prior over every measurement budget  (~3.5 h on CPU)
 python scripts/tune_lasso.py          # pick the baseline's shrinkage first
 python scripts/run_benchmark.py --n-images 10 --steps 1000 --restarts 10 --l2-penalty 0.1
 
-# 3. the same sweep with the regulariser removed  (~2.9 h)
+# 3. the same sweep with the regulariser removed  (~4.6 h)
 python scripts/run_benchmark.py --l2-penalty 0 --output-dir results/unregularised
 
 # 4. how much the latent regulariser matters (VAE decoders only, ~30 min)

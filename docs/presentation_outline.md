@@ -229,8 +229,8 @@ comparisons are paired and we test them that way.
   Each VAE on its own is significantly better from 25 to 300.
 - **The VAE beats the DCGAN at `k=20` at nine budgets out of ten, and at `k=30`
   only while measurements are scarce.** Every VAE has the lower mean error than
-  every DCGAN from 50 measurements up; against `k=30` ten images are not enough to
-  prove it beyond the low budgets. If asked whether the penalty is unfair to the
+  every DCGAN at every budget; against `k=30` ten images are not enough to prove
+  it beyond the low budgets. If asked whether the penalty is unfair to the
   GANs: we ran them at 0.001 too, the value the paper gives for a DCGAN, and it
   does not help, so the answer is no.
 
@@ -274,8 +274,8 @@ Parameter count does not explain it: the DCGAN generator is only 4.5x larger, an
 our convolutional decoder is smaller than the paper's yet twice as slow. What it
 tracks is arithmetic per forward pass, and the DCGAN convolves 256 and 512
 channels at nearly full resolution. The cost is paid at every reconstruction,
-since recovery is itself an optimisation. And the punchline: the most expensive
-prior is also the least accurate at almost every budget.
+since recovery is itself an optimisation. And the punchline: the two most
+expensive priors are also the two least accurate, at every budget.
 
 ---
 
@@ -359,7 +359,7 @@ survives is the crossover: every prior beats both baselines at 50, 75, 100 and
 300 measurements and loses to both at 750. What does not survive is any ranking
 among the three VAEs, at any budget. Against the DCGAN at `k=20` the VAEs win at
 nine budgets out of ten; against `k=30` only at the low budgets, though their
-mean error is lower everywhere from 50 up. The cost of
+mean error is lower at every budget. The cost of
 more images is the DCGAN recovery, about 600 seconds per budget.
 
 **What does the theoretical guarantee actually require?**
