@@ -165,8 +165,8 @@ def test_sample_efficiency_table_is_reproducible(benchmark, means):
         ("vae-30", 0.0070),
         ("fcvae-20", 0.0072),
         ("vae-20", 0.0076),
-        ("dcgan-20", 0.0098),
-        ("dcgan-30", 0.0235),
+        ("dcgan-30", 0.0093),
+        ("dcgan-20", 0.0119),
     ],
 )
 def test_quoted_error_floors(means, method, expected):
@@ -238,9 +238,9 @@ def test_quoted_recovery_costs(benchmark):
     # prior, so the test has to measure that and not an average over the two
     # DCGANs, which is a different number.
     ratio = seconds[PRIORS].max() / seconds[PRIORS].min()
-    assert round(ratio) == 103
+    assert round(ratio) == 93
     for path in (ROOT_DIR / "README.md", REPORT / "conclusions.tex", REPORT / "summary.tex"):
-        assert "103" in path.read_text(encoding="utf-8"), f"{path.name} quotes another ratio"
+        assert "93" in path.read_text(encoding="utf-8"), f"{path.name} quotes another ratio"
 
 
 def test_lambda_sweep_endpoints():
@@ -391,15 +391,18 @@ def test_the_sample_efficiency_prose_covers_every_prior(means, benchmark):
     target = wide.loc[REFERENCE_M, REFERENCE].mean()
     readme = normalise((ROOT_DIR / "README.md").read_text(encoding="utf-8"))
 
-    matching = means["dcgan-20"].index[means["dcgan-20"] <= target]
-    assert len(matching), "dcgan-20 no longer reaches the reference level"
-    needed = int(matching.min())
-    assert f"DCGAN at k=20 needs {needed}" in readme, (
-        f"the README should say the DCGAN at k=20 needs {needed} measurements"
+    reaching = [m for m in ("dcgan-20", "dcgan-30") if (means[m] <= target).any()]
+    missing = [m for m in ("dcgan-20", "dcgan-30") if m not in reaching]
+    assert len(reaching) == 1 and len(missing) == 1, (
+        f"the README describes one DCGAN reaching the level and one not; data says {reaching}"
     )
 
-    assert means["dcgan-30"].min() > target, "dcgan-30 now reaches the reference level"
-    assert "at k=30 it never reaches the level" in readme
+    hit, miss = reaching[0], missing[0]
+    needed = int(means[hit].index[means[hit] <= target].min())
+    assert f"DCGAN at {hit.replace('dcgan-', 'k=')} needs {needed}" in readme, (
+        f"the README should say the {hit} needs {needed} measurements"
+    )
+    assert f"at {miss.replace('dcgan-', 'k=')} it never reaches the level" in readme
 
 
 def test_the_unregularised_comparison_is_quoted_correctly():
@@ -426,3 +429,40 @@ def test_the_unregularised_comparison_is_quoted_correctly():
             assert f"{with_penalty:.4f}" in text, (
                 f"the lambda=0.1 error at m={m} is {with_penalty:.4f}"
             )
+
+
+def test_the_paper_penalty_sweep_is_quoted_correctly():
+    """The DCGAN columns at the penalty the paper gives for a GAN.
+
+    The write-ups use this sweep to say that the main table's penalty is not
+    handicapping the DCGANs, so both floors have to match the data.
+    """
+    path = RESULTS_DIR / "dcgan_paper_penalty" / "benchmark.csv"
+    if not path.exists():
+        pytest.skip("the paper-penalty sweep is not present")
+
+    at_paper = pd.read_csv(path).pivot_table(index="m", columns="method", values="per_pixel_error")
+    main = pd.read_csv(RESULTS_DIR / "benchmark.csv").pivot_table(
+        index="m", columns="method", values="per_pixel_error"
+    )
+    meta = json.loads(
+        (RESULTS_DIR / "dcgan_paper_penalty" / "benchmark_meta.json").read_text(encoding="utf-8")
+    )
+    assert meta["protocol"]["l2_penalty"] == 0.001
+
+    documents = [
+        normalise((ROOT_DIR / "README.md").read_text(encoding="utf-8")),
+        normalise((REPORT / "results.tex").read_text(encoding="utf-8")),
+    ]
+    for method in ("dcgan-20", "dcgan-30"):
+        paper = at_paper[method][at_paper.index >= 300].mean()
+        table = main[method][main.index >= 300].mean()
+        for text in documents:
+            assert f"{paper:.4f}" in text, f"{method} at 0.001 has floor {paper:.4f}"
+            assert f"{table:.4f}" in text, f"{method} at 0.1 has floor {table:.4f}"
+
+    # The claim the prose rests on: 0.001 is not the better setting for k=30.
+    assert (
+        at_paper["dcgan-30"][at_paper.index >= 300].mean()
+        > main["dcgan-30"][main.index >= 300].mean()
+    )
