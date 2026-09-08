@@ -216,8 +216,9 @@ the table would be noise.
 **The VAE family beats the DCGAN at `k=20` everywhere, and at `k=30` only when
 measurements are scarce.** Against `dcgan-20` every VAE is significantly more
 accurate at nine of the ten budgets. Against `dcgan-30` the advantage is
-significant only while measurements are scarce, at three or four budgets
-depending on the VAE, and elsewhere the difference is real but too small for ten
+significant only while measurements are scarce, and at how many budgets depends
+on the VAE: four for `k=30`, three for the paper architecture, one for `k=20`.
+Elsewhere the difference is real but too small for ten
 images to establish: at 750 measurements `dcgan-30` sits at 0.0085 against 0.0069
 for the best VAE. Every VAE has a lower mean error than every DCGAN at every
 budget from 50 up; what changes with `dcgan-30` is only whether ten images can
