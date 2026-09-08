@@ -155,7 +155,8 @@ optimisation converged and not how good the answer is.
 - Either baseline needs 400 measurements to reach about 0.011. All three VAE
   priors get there with **75**, a **5.3x** saving. The factor is the same
   against both baselines, so it does not rest on which one we pick. The paper
-  reports 5 to 10x, so we land at the bottom of that range.
+  reports 5 to 10x, so we land at the bottom of that range. The DCGAN at `k=30`
+  needs 300, a 1.3x saving; the one at `k=20` never gets there.
 - If asked about the pixel baseline: predicting a blank image scores 0.1178 on
   these digits, and the pixel baseline is at or above that at 10 and 25
   measurements, so a ratio against it there compares against nothing. At 400 it
@@ -188,23 +189,23 @@ measurements up.
 | VAE k=30 | 0.0070 |
 | VAE, paper architecture | 0.0072 |
 | VAE k=20 | 0.0076 |
-| DCGAN k=20 | 0.0098 |
-| DCGAN k=30 | 0.0235 |
+| DCGAN k=30 | 0.0093 |
+| DCGAN k=20 | 0.0119 |
 
-**Caveat to have ready.** The two DCGAN rows come from generators that were
-trained on the training and test splits together, before the split was held out,
-and with a training recipe that has since been aligned with the reference paper.
-They are optimistic by an unknown amount. Say it if the DCGAN numbers are
-questioned, and do not lean on them for any conclusion.
+**Have ready if asked about the DCGANs.** Each was trained on the same 54,000
+images as the VAEs, and the epoch used was chosen among seven saved candidates on
+held-out data. That choice earned about 11 per cent in both runs, since the error
+does not fall monotonically with the epoch and the last one was not the best. One
+seed each rather than the VAEs' two, because a run costs some fifteen hours.
 
 **Say.** Past roughly 200 measurements the learned priors stop improving. The
 bottleneck is no longer information, it is that the true digit is not in the
 range of G, and that distance does not depend on the budget. From 500
 measurements both baselines overtake everything, and at 750 the pixel one
 recovers the digits almost exactly while the priors stay put. The paper says the
-reversal takes more than 500 measurements; we see it from 500 onwards. A factor 3.3 separates the best floor
-from the worst, so on this side of the plot the generator matters far more than
-the recovery algorithm.
+reversal takes more than 500 measurements; we see it from 500 onwards. A factor 1.7 separates the best floor
+from the worst, so on this side of the plot the generator still matters, though
+far less than the gap to the baselines does when measurements are scarce.
 
 ---
 
@@ -225,11 +226,11 @@ comparisons are paired and we test them that way.
   correction. Be precise if pressed: 100 is the only budget where it holds for
   all five priors at once, because the two DCGAN columns drop out elsewhere.
   Each VAE on its own is significantly better from 25 to 300.
-- **The VAE beats the DCGAN at k=30 clearly, at k=20 only at one budget** under
-  the penalty the main table uses. Worth knowing if asked: with the penalty
-  removed the k=20 comparison becomes significant at eight budgets out of ten.
-  The conclusion there depends on a hyper-parameter the paper prescribes for its
-  VAE, not for its GAN.
+- **The VAE beats the DCGAN at `k=20` at nine budgets out of ten, and at `k=30`
+  only while measurements are scarce.** From 300 up the DCGAN at `k=30` has the
+  lower mean error, though not significantly so. If asked whether the penalty is
+  unfair to the GANs: we ran them at 0.001 too, the value the paper gives for a
+  DCGAN, and it does not help, so the answer is no.
 
 Saying out loud which differences do not reach significance is worth more than
 claiming five results and defending three.
@@ -264,9 +265,9 @@ never validated for them.
 | Lasso, either basis | about 1.5 |
 | VAE, paper architecture | 6.6 |
 | VAE, convolutional | 15 and 19 |
-| DCGAN | about 670 |
+| DCGAN | about 600 |
 
-**Say.** A **103x** gap between the cheapest and the dearest learned prior.
+**Say.** A **93x** gap between the cheapest and the dearest learned prior.
 Parameter count does not explain it: the DCGAN generator is only 4.5x larger, and
 our convolutional decoder is smaller than the paper's yet twice as slow. What it
 tracks is arithmetic per forward pass, and the DCGAN convolves 256 and 512

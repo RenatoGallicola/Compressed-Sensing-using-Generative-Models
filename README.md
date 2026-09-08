@@ -100,18 +100,18 @@ measurement matrices and the same noise, with the latent regulariser at the
 value the reference paper recommends. Error is the squared distance to the
 ground truth, per pixel; lower is better.
 
-|   m | Lasso (pixel) | Lasso (DCT) | VAE (paper arch.) | VAE k=20 | VAE k=30 | DCGAN k=20 | DCGAN k=30 |
-|----:|--------------:|------------:|------------------:|---------:|---------:|-----------:|-----------:|
-|  10 |        0.1217 |      0.1032 |        **0.0680** |   0.0778 |   0.0755 |     0.0989 |     0.0731 |
-|  25 |        0.1189 |      0.0986 |            0.0276 |   0.0288 |**0.0194**|     0.0571 |     0.0459 |
-|  50 |        0.1171 |      0.0835 |        **0.0118** |   0.0155 |   0.0191 |     0.0427 |     0.0346 |
-|  75 |        0.1127 |      0.0710 |        **0.0084** |   0.0088 |   0.0091 |     0.0245 |     0.0318 |
-| 100 |        0.1046 |      0.0628 |            0.0083 |   0.0083 |**0.0077**|     0.0136 |     0.0294 |
-| 200 |        0.0827 |      0.0325 |            0.0075 |   0.0079 |**0.0072**|     0.0106 |     0.0233 |
-| 300 |        0.0408 |      0.0202 |            0.0072 |   0.0076 |**0.0071**|     0.0105 |     0.0249 |
-| 400 |        0.0107 |      0.0115 |            0.0072 |   0.0076 |**0.0070**|     0.0101 |     0.0229 |
-| 500 |    **0.0008** |      0.0064 |            0.0072 |   0.0076 |   0.0071 |     0.0094 |     0.0237 |
-| 750 |    **0.0000** |      0.0006 |            0.0070 |   0.0075 |   0.0069 |     0.0094 |     0.0225 |
+|   m | Lasso (pixel) | Lasso (DCT) | VAE (paper arch.) | VAE k=20 |   VAE k=30 | DCGAN k=20 | DCGAN k=30 |
+|----:|--------------:|------------:|------------------:|---------:|-----------:|-----------:|-----------:|
+|  10 |        0.1217 |      0.1032 |        **0.0680** |   0.0778 |     0.0755 |     0.0864 |     0.1060 |
+|  25 |        0.1189 |      0.0986 |            0.0276 |   0.0288 | **0.0194** |     0.0813 |     0.0635 |
+|  50 |        0.1171 |      0.0835 |        **0.0118** |   0.0155 |     0.0191 |     0.0327 |     0.0383 |
+|  75 |        0.1127 |      0.0710 |        **0.0084** |   0.0088 |     0.0091 |     0.0167 |     0.0306 |
+| 100 |        0.1046 |      0.0628 |            0.0083 |   0.0083 | **0.0077** |     0.0142 |     0.0147 |
+| 200 |        0.0827 |      0.0325 |            0.0075 |   0.0079 | **0.0072** |     0.0125 |     0.0155 |
+| 300 |        0.0408 |      0.0202 |            0.0072 |   0.0076 | **0.0071** |     0.0125 |     0.0102 |
+| 400 |        0.0107 |      0.0115 |            0.0072 |   0.0076 | **0.0070** |     0.0120 |     0.0088 |
+| 500 |    **0.0008** |      0.0064 |            0.0072 |   0.0076 |     0.0071 |     0.0117 |     0.0096 |
+| 750 |    **0.0000** |      0.0006 |            0.0070 |   0.0075 |     0.0069 |     0.0116 |     0.0085 |
 
 Full table in [`results/benchmark.csv`](results/benchmark.csv), one row per
 method, budget and image, each carrying the hash of the checkpoint and the
@@ -139,8 +139,8 @@ that the low-budget comparisons can be read for what they are.
 ### Three regimes
 
 **Scarce measurements.** Every VAE prior beats both baselines up to 400
-measurements, and so does the DCGAN at `k=20`. The DCGAN at `k=30` is the
-exception and is beaten by the DCT baseline from 300 up. At 25 measurements the
+measurements, and so does the DCGAN at `k=30`; the DCGAN at `k=20` does so up to
+300. At 25 measurements the
 best prior is 5.1x more accurate than the DCT baseline, at a budget where
 neither baseline returns anything recognisable as a digit. The ratio against the
 pixel baseline is 6.1x, but that one is at the blank-image level here, so the DCT
@@ -152,9 +152,9 @@ The figure is the same against either baseline, so it does not depend on which
 one is taken as the reference; what does depend on that choice is how many
 individual digits the prior beats there, 8 or 9 of 10 against the DCT baseline
 and 1 of 10 against the pixel one, for the reason given above. The DCGAN at
-`k=20` needs 200, a 2x saving; at `k=30` it never reaches the level within the
+`k=30` needs 300, a 1.3x saving; at `k=20` it never reaches the level within the
 sweep. Bora et al. report 5 to 10x, so the reproduction lands at the bottom of
-that interval. Details in
+that interval, and only the VAE priors land inside it at all. Details in
 [`results/sample_efficiency.md`](results/sample_efficiency.md).
 
 **Abundant measurements, from 500 up.** Lasso in the pixel basis overtakes every
@@ -166,8 +166,10 @@ the optimisation: the generative curves are flat because the reconstruction is
 confined to the range of the generator, and the distance from a real digit to
 that range does not depend on how many measurements are taken. Averaged over the
 budgets from 300 up, that floor is 0.0070 for our convolutional VAE at `k=30`,
-0.0072 for the paper architecture and 0.0076 for our `k=20`, against 0.0098 and
-0.0235 for the DCGANs.
+0.0072 for the paper architecture and 0.0076 for our `k=20`, against 0.0093 for
+the DCGAN at `k=30` and 0.0119 at `k=20`. The five floors span a factor of 1.7,
+so the choice of generator matters, but far less than the gap to the baselines at
+low budgets.
 
 <p align="center">
   <img src="results/figures/reconstruction_grid.png" width="95%"
@@ -211,17 +213,24 @@ separate. The honest reading is that neither the architecture nor the latent
 dimension matters here at this sample size, and any ranking between them read off
 the table would be noise.
 
-**The VAE family beats the DCGAN at `k=30`, and at `k=20` the answer depends on
-the regulariser.** Against `dcgan-30` every VAE is significantly better at almost
-every budget. Against `dcgan-20` the difference reaches significance at a single
-budget in the table above, which uses $\lambda = 0.1$; in the unregularised
-sweep the same comparison is significant at eight budgets out of ten. That is
-worth stating plainly, because $\lambda = 0.1$ is the value Bora et al. report
-for their MNIST **VAE**, while for their DCGAN they report 0.001. The DCGAN
-columns therefore carry a penalty two orders of magnitude larger than the one the
-paper prescribes for a GAN, and it was never swept for them. Together with the
-smaller selection budget and the training-set leakage described below, this makes
-the VAE-against-DCGAN comparison the weakest one reported here.
+**The VAE family beats the DCGAN at `k=20` everywhere, and at `k=30` only when
+measurements are scarce.** Against `dcgan-20` every VAE is significantly more
+accurate at nine of the ten budgets. Against `dcgan-30` the advantage holds from
+10 to 75 measurements and then stops: from 300 up that generator has a lower mean
+error than any VAE, 0.0085 against 0.0069 at 750, though the difference does not
+reach significance with ten images. The two DCGANs differ from each other by more
+than either differs from a VAE at the high budgets, which is a statement about
+how much a single adversarial training run varies rather than about the
+architecture.
+
+**The latent penalty is not what separates the families.** The table uses
+$\lambda = 0.1$, the value Bora et al. report for their MNIST VAE, while the only
+value they give for a DCGAN is 0.001, on celebA at a different latent dimension
+and pixel range. Running both DCGANs at 0.001 as well
+([`results/dcgan_paper_penalty/`](results/dcgan_paper_penalty)) leaves the floor
+at `k=20` essentially unchanged, 0.0116 against 0.0119, and makes `k=30`
+**worse**, 0.0104 against 0.0093. The penalty the table uses is therefore not
+handicapping the DCGANs; for one of them it is the better setting.
 
 ### The latent regulariser
 
@@ -248,8 +257,8 @@ repeating it for the DCGANs would cost hours.
 
 Recovering ten images at one budget, ten restarts and a thousand Adam steps:
 about 1.5 s with either Lasso baseline, 6.6 s with the paper's decoder, 15 s and
-19 s with our convolutional decoders, and about 670 s with a DCGAN generator, a
-**103x** gap between the cheapest and the dearest learned prior. Parameter counts
+19 s with our convolutional decoders, and about 600 s with a DCGAN generator, a
+**93x** gap between the cheapest and the dearest learned prior. Parameter counts
 do not explain that: the DCGAN generator is only 4.5x larger than the paper's
 decoder, and our convolutional decoder is *smaller* than it yet twice as slow.
 What the cost tracks is arithmetic per forward pass, and the DCGAN applies
@@ -461,29 +470,23 @@ which checkpoint was kept, and the reasoning is in
   VAEs from each other anywhere: every corrected p-value between them is 1.0.
   Which comparisons hold at which budget is stated above rather than averaged
   over.
-- **The DCGAN checkpoints saw the test split during training, and predate the
-  current recipe.** They were produced before the training script held the test
-  split out, so the two DCGAN columns are optimistic by an unknown amount and are
-  not a clean held-out measurement. They also predate the alignment of the
-  training recipe with the reference paper, so they were trained at a different
-  learning rate, batch size and momentum, with one generator update per
-  discriminator update instead of two, and no checkpoint selection was applied to
-  them. The
-  VAE columns are unaffected: those generators were trained on 54,000 training
-  images with the test split untouched. Retraining a DCGAN takes about ten hours
-  on CPU, which is why the columns are published with this caveat rather than
-  quietly dropped.
-- **The two model families receive different selection budgets.** The VAEs are
-  the better of two seeds chosen on held-out validation loss. The DCGANs are
-  single runs with no selection of any kind, neither across seeds nor across
-  epochs, so their columns are one draw from a distribution this project has
-  itself shown to be wide. The rules that will govern their retraining, and the
-  measured size of the criterion difference those rules introduce, are in
+- **The two model families receive different selection budgets.** Every
+  generator is trained on the same 54,000 images with the test split untouched,
+  and every one is chosen on held-out data. But the VAEs are the better of two
+  seeds, while a DCGAN run costs about fifteen hours of CPU against forty minutes
+  for a VAE, so each DCGAN is a single seed whose best epoch is kept. Their
+  columns are therefore one draw from a distribution this project has shown to be
+  wide: the two DCGANs differ from each other by more than the three VAEs do. The
+  criteria also differ, on the ELBO for the VAE and on representation error for
+  the DCGAN, and the size of that difference is measured in
   [`docs/model_selection.md`](docs/model_selection.md).
-- **The DCGAN columns carry a latent penalty chosen for a different model.**
-  The table uses $\lambda = 0.1$ throughout, which Bora et al. report for their
-  MNIST VAE. The only value they give for a DCGAN is 0.001, on another dataset.
-  How much the VAE-against-DCGAN comparison depends on this is reported above.
+- **Checkpoint selection does real work for the DCGAN.** Across the seven saved
+  epochs of each run the representation error spans a factor of 1.3 at `k=20` and
+  1.4 at `k=30`, it does not fall monotonically with the epoch, and in both runs
+  the final epoch was about 11 per cent worse than the one the rule chose. A
+  DCGAN column produced by simply stopping the clock would have been noticeably
+  weaker, which is worth knowing when comparing these numbers with a GAN result
+  reported without a selection rule.
 - **The error bars describe image-to-image spread.** One measurement matrix is
   drawn per budget, so the intervals say nothing about how much the curves would
   move under a different draw of `A`.

@@ -2,9 +2,7 @@
 
 Written before running the experiments it describes, so that the rules cannot be
 adjusted once the numbers are known. The commit that fixes each set of rules
-precedes the commit that adds the checkpoints it governs, with one exception
-stated at the top of the DCGAN section: the two GAN checkpoints currently in
-`models/` predate these rules and do not follow them.
+precedes the commit that adds the checkpoints it governs.
 
 ## Why this exists
 
@@ -29,10 +27,8 @@ Those figures were measured on ten test digits, and they are what prompted the
 intervention below. That is a decision informed by test-set behaviour, and it is
 recorded here rather than left implicit. What it does not affect is which
 checkpoint is used: no rule below consults the test split or the benchmark, so
-no model was ever *chosen* on the data it is scored on. That is a statement about
-selection. It is not a statement about training, and it does not cover the two
-GAN checkpoints in use, which were trained on the test split before it was held
-out.
+no model was ever chosen on the data it is scored on, and none was trained on it
+either.
 
 ## The intervention
 
@@ -64,15 +60,6 @@ The ramp length is fixed at 10 epochs and is not tuned, for any architecture.
 
 ## The rules for the DCGAN, fixed in advance
 
-**The two GAN generators in `models/` do not follow any of the rules below.**
-They were trained before these rules existed: on the training and test splits
-together, with the optimiser settings the script used before it was aligned with
-the reference paper, and with no selection among seeds or epochs. They are the
-generators behind the two DCGAN columns of the published benchmark, which is why
-those columns are reported with the limitation stated in the README rather than
-presented as a clean held-out measurement. The rules below govern the retraining,
-not the results as they stand.
-
 A GAN has no likelihood, so none of rule 2 above transfers: there is no
 validation loss, no stopping criterion, and sample quality oscillates from epoch
 to epoch. Keeping whatever the last epoch produced is not a neutral default, it
@@ -83,7 +70,8 @@ and where they differ the difference is stated.
    DCGAN recipe the reference paper gives (sec. 5.2): Adam at a learning rate of
    0.0002 with `beta_1 = 0.5`, mini-batches of 64, two generator updates per
    discriminator update. One seed rather than the VAE's two, because a run costs
-   about ten hours of CPU against forty minutes for a VAE. This is a smaller
+   between fifteen and eighteen hours of CPU, as both of them did, against forty
+   minutes for a VAE. This is a smaller
    budget than the VAE receives, and it is not hidden: the DCGAN columns are
    single draws from a distribution this document has itself shown to be wide.
 2. **Training data.** The same 54,000 images the VAE trains on, so the two
@@ -166,9 +154,29 @@ runs in the DCGAN's favour by roughly the margin seen here.
 
 ### DCGAN
 
-Not yet recorded. The runs the rules above describe have not been carried out,
-and the generators currently in `models/` are the earlier ones described at the
-top of that section. When the runs finish, the outcome comes from
-`models/dcgan_selection_dim20.txt` and `models/dcgan_selection_dim30.txt`, which
-`scripts/select_dcgan.py` writes, and the two DCGAN columns of the benchmark are
-recomputed from the selected checkpoints.
+Representation error of every saved candidate, over the 32 held-out training
+images, with the selected epoch in bold:
+
+| epoch | `k=20` | `k=30` |
+|---|---|---|
+| 20 | 0.01209 | 0.01239 |
+| 25 | 0.01294 | 0.01236 |
+| 30 | **0.01104** | 0.01297 |
+| 35 | 0.01408 | 0.01742 |
+| 40 | 0.01280 | 0.01372 |
+| 45 | 0.01415 | **0.01225** |
+| 50 | 0.01229 | 0.01358 |
+
+Rule 5 requires the effect of this rule to be published rather than asserted, so:
+the candidates span a factor of 1.28 at `k=20` and 1.42 at `k=30`, the error does
+not fall monotonically with the epoch, and in both runs the final epoch scored
+about 11 per cent worse than the selected one. Keeping the last epoch, which is
+what a run without a selection rule amounts to, would have produced a weaker
+prior in both cases.
+
+Rule 6 records that this criterion is a proxy for what the benchmark measures
+while the VAE's is not. The measured size of that difference is in the section
+above: applied to the VAE seeds, the two criteria agree for both convolutional
+models and disagree for the fully connected one. The DCGAN also receives one seed
+against the VAE's two, for the reason given in rule 1, and the two DCGAN columns
+should be read as single draws.
