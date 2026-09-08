@@ -58,14 +58,9 @@
     "vae-20",
     "vae-30"
   ],
-  "git_revision": "b095f15",
+  "git_revision": "9bf95d8",
   "checkpoints": {
-    "lasso": "lasso",
-    "lasso-dct": "lasso-dct",
-    "vae-20": "43be5f2255e1",
-    "vae-30": "cd86042422b6",
-    "fcvae-20": "8ef39c72e3c4",
-    "dcgan-20": "dd39a36dc906",
-    "dcgan-30": "fd24bfe7e7b4"
+    "dcgan-20": "cf59fb34e570",
+    "dcgan-30": "0301d7fb548c"
   }
 }

@@ -14,8 +14,8 @@ Mean per-pixel error 0.0115 at 400 measurements (median 0.0113, largest 0.0151, 
 | VAE, paper architecture, k=20 | 75 | 5.3x | 8 of 10 |
 | VAE, k=20 | 75 | 5.3x | 8 of 10 |
 | VAE, k=30 | 75 | 5.3x | 9 of 10 |
-| DCGAN, k=20 | 200 | 2.0x | 8 of 10 |
-| DCGAN, k=30 | never, in the sweep | n/a | n/a |
+| DCGAN, k=20 | never, in the sweep | n/a | n/a |
+| DCGAN, k=30 | 300 | 1.3x | 8 of 10 |
 
 ## Against Lasso (pixel basis)
 
@@ -26,8 +26,8 @@ Mean per-pixel error 0.0107 at 400 measurements (median 0.0003, largest 0.0834, 
 | VAE, paper architecture, k=20 | 75 | 5.3x | 1 of 10 |
 | VAE, k=20 | 75 | 5.3x | 1 of 10 |
 | VAE, k=30 | 75 | 5.3x | 1 of 10 |
-| DCGAN, k=20 | 200 | 2.0x | 1 of 10 |
-| DCGAN, k=30 | never, in the sweep | n/a | n/a |
+| DCGAN, k=20 | never, in the sweep | n/a | n/a |
+| DCGAN, k=30 | 300 | 1.3x | 1 of 10 |
 
 ## The level of a blank image
 

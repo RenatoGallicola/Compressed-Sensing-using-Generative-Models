@@ -10,6 +10,7 @@ The producer of each file is named beside it:
 | `benchmark_meta.json` | the protocol the table was produced with, checked before any `--merge` |
 | `reconstructions.npz` | every reconstruction, keyed `<method>__m<budget>`, plus `ground_truth` |
 | `unregularised/` | the same sweep with $\lambda = 0$, for the comparison the reference paper draws |
+| `dcgan_paper_penalty/` | `run_benchmark.py --l2-penalty 0.001` output: the two DCGAN columns at the penalty the reference paper gives for a GAN |
 | `lambda_sweep.csv` | `run_lambda_sweep.py` output: error and latent norm for several values of $\lambda$ |
 | `lasso_tuning.csv` | `tune_lasso.py` output: the shrinkage sweep used to configure the baseline |
 

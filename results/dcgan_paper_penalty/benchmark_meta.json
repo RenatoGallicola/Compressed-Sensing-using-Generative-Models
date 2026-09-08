@@ -4,7 +4,7 @@
     "steps": 1000,
     "restarts": 10,
     "learning_rate": 0.01,
-    "l2_penalty": 0.1,
+    "l2_penalty": 0.001,
     "noise_norm": 0.1,
     "noise_std": null,
     "lasso_alpha": "per budget",
@@ -51,12 +51,7 @@
   },
   "methods": [
     "dcgan-20",
-    "dcgan-30",
-    "fcvae-20",
-    "lasso",
-    "lasso-dct",
-    "vae-20",
-    "vae-30"
+    "dcgan-30"
   ],
   "git_revision": "9bf95d8",
   "checkpoints": {
