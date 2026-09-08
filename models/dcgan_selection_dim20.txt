@@ -1,0 +1,13 @@
+k=20, selected on representation error over 32 held-out training images (3 restarts, 500 steps)
+
+  gan_gen_dim20_epoch020.keras: 0.01209
+  gan_gen_dim20_epoch025.keras: 0.01294
+  gan_gen_dim20_epoch030.keras: 0.01104
+  gan_gen_dim20_epoch035.keras: 0.01408
+  gan_gen_dim20_epoch040.keras: 0.01280
+  gan_gen_dim20_epoch045.keras: 0.01415
+  gan_gen_dim20_epoch050.keras: 0.01229
+
+selected: gan_gen_dim20_epoch030.keras at 0.01104
+spread across the saved epochs: 0.00311 (1.28x)
+last epoch, which no rule would have chosen: gan_gen_dim20_epoch050.keras at 0.01229
