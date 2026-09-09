@@ -19,11 +19,20 @@ import hashlib
 import importlib.util
 import json
 import sys
+from itertools import product
 
+import numpy as np
 import pandas as pd
 import pytest
 
-from csgm.config import RESULTS_DIR, ROOT_DIR, checkpoint_path
+from csgm.config import (
+    N_PIXELS,
+    NOISE_SEED_OFFSET,
+    RESULTS_DIR,
+    ROOT_DIR,
+    checkpoint_path,
+)
+from csgm.measurements import gaussian_measurement_matrix, measure
 
 PRIORS = ["fcvae-20", "vae-20", "vae-30", "dcgan-20", "dcgan-30"]
 
@@ -281,3 +290,115 @@ def test_the_report_figures_are_the_generated_ones():
         f"docs/report/assets is behind results/figures for {stale}; "
         "copy the regenerated figures across"
     )
+
+
+def test_the_significance_table_matches_an_exact_computation(benchmark):
+    """The table must be right, not merely reproducible.
+
+    ``test_the_significance_table_reproduces`` re-runs ``run_stats.py`` and
+    compares, so a mistake inside that script reproduces perfectly and passes.
+    Here the signed-rank p-value is computed by enumerating all 2**n sign
+    assignments, which is the definition of the exact test, and Holm is applied
+    independently. Nothing from ``scripts/`` is imported.
+    """
+    path = RESULTS_DIR / "significance.csv"
+    if not path.exists():
+        pytest.skip("significance.csv is not present")
+    committed = pd.read_csv(path)
+    wide = benchmark.pivot_table(index=["m", "image"], columns="method", values="per_pixel_error")
+
+    def exact(differences):
+        assert (differences != 0).all(), "a tie would need a rule of its own"
+        ranks = pd.Series(abs(differences)).rank().to_numpy()
+        assert len(set(abs(differences))) == len(differences), "tied magnitudes need average ranks"
+        centre = ranks.sum() / 2
+        observed = abs(ranks[differences > 0].sum() - centre)
+        sums = np.array(
+            [ranks[list(signs)].sum() for signs in product([False, True], repeat=len(ranks))]
+        )
+        return float((abs(sums - centre) >= observed - 1e-9).mean())
+
+    def holm(values):
+        adjusted, running = [0.0] * len(values), 0.0
+        for rank, i in enumerate(sorted(range(len(values)), key=lambda j: values[j])):
+            running = max(running, (len(values) - rank) * values[i])
+            adjusted[i] = min(1.0, running)
+        return adjusted
+
+    for (better, worse), group in committed.groupby(["better", "worse"], sort=False):
+        budgets = sorted(group["m"])
+        raw = [
+            exact(wide.loc[m, better].to_numpy() - wide.loc[m, worse].to_numpy())
+            for m in budgets
+        ]
+        adjusted = holm(raw)
+        recorded = group.set_index("m")
+        for i, m in enumerate(budgets):
+            assert raw[i] == pytest.approx(recorded.loc[m, "p_wilcoxon"], abs=1e-12), (
+                f"{better} vs {worse} at m={m}"
+            )
+            assert adjusted[i] == pytest.approx(recorded.loc[m, "p_holm"], abs=1e-12), (
+                f"{better} vs {worse} at m={m}, after Holm"
+            )
+
+
+def test_the_columns_of_the_benchmark_agree_with_each_other(benchmark):
+    """PSNR is a function of the error, and the residual of the reconstruction.
+
+    Every check on the results reads ``per_pixel_error`` and takes the rest of
+    the row on trust. These two columns are quoted in the write-ups as well, so
+    they are derived again here: PSNR from the error, and the residual from the
+    measurement matrix and the noise the recorded seeds produce.
+    """
+    archive_path = RESULTS_DIR / "reconstructions.npz"
+    if not archive_path.exists():
+        pytest.skip("reconstructions.npz is not present")
+
+    expected = -10 * np.log10(benchmark["per_pixel_error"].clip(lower=1e-12))
+    assert (benchmark["psnr_db"] - expected).abs().max() < 1e-3
+
+    protocol = _defaults("run_benchmark")
+    with np.load(archive_path) as archive:
+        truth = archive["ground_truth"].reshape(-1, N_PIXELS)
+        for m in sorted(benchmark["m"].unique()):
+            A = gaussian_measurement_matrix(m, N_PIXELS, seed=protocol.seed + m)
+            y = measure(
+                truth,
+                A,
+                noise_std=protocol.noise_norm / np.sqrt(m),
+                seed=protocol.seed + m + NOISE_SEED_OFFSET,
+            )
+            for method in sorted(benchmark["method"].unique()):
+                key = f"{method}__m{m}"
+                if key not in archive:
+                    continue
+                x_hat = archive[key].reshape(-1, N_PIXELS)
+                rows = benchmark[(benchmark["m"] == m) & (benchmark["method"] == method)]
+                rows = rows.sort_values("image")
+                residual = np.linalg.norm(x_hat @ A.T - y, axis=1)
+                assert residual == pytest.approx(
+                    rows["measurement_residual"].to_numpy(), abs=1e-4
+                ), f"{method} at m={m}: the recorded residual is not the one these seeds give"
+
+
+def test_the_error_bars_stay_inside_the_range_of_a_squared_error():
+    """A bar reaching the axis is an interval leaving the domain of the quantity.
+
+    The curve figure plots an interval for the mean per-pixel error, which cannot
+    be negative. A symmetric normal-theory interval does go negative here, at
+    three of the seventy points, because ten per-image errors are strongly
+    skewed; the bootstrap interval the figure uses does not. Without this the
+    statistic could be swapped back and the only symptom would be three bars
+    clipped by the logarithmic axis.
+    """
+    path = RESULTS_DIR / "benchmark.csv"
+    if not path.exists():
+        pytest.skip("benchmark.csv is not present")
+    make_figures = _load_script("make_figures")
+    table = pd.read_csv(path)
+
+    for (method, m), group in table.groupby(["method", "m"]):
+        values = group["per_pixel_error"].to_numpy()
+        low, high = make_figures.bootstrap_interval(values, seed=int(m))
+        assert low > 0, f"{method} at m={m}: the interval reaches zero"
+        assert low <= values.mean() <= high, f"{method} at m={m}: the interval misses the mean"
