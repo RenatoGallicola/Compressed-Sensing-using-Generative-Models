@@ -190,9 +190,11 @@ difference significant in every one. In the other direction the picture is
 narrower than the means suggest: 50, 75, 100 and 300 are the only budgets at
 which every prior beats every baseline significantly at once, because the two
 DCGAN columns drop out elsewhere. Each VAE prior on its own is significantly
-better than both baselines from 25 to 300. The largest corrected p-value among these is 0.0195,
-which is also the smallest attainable: with ten paired samples Wilcoxon bottoms
-out at 0.00195 and the correction across ten budgets multiplies that by ten.
+better than both baselines from 25 to 300. The largest corrected p-value among these is 0.0488, and
+it belongs to a DCGAN column; every claim involving only the VAEs is at 0.0195,
+which is the smallest value attainable, since with ten paired samples Wilcoxon
+bottoms out at 0.00195 and the correction across ten budgets multiplies that by
+ten.
 
 The correction is applied within each pair of methods across the ten budgets,
 which is the family a claim like "significant from 75 up" spans. That choice is
