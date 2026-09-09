@@ -18,6 +18,7 @@ import ast
 import json
 import re
 
+import pandas as pd
 import pytest
 
 from csgm.config import ROOT_DIR
@@ -68,7 +69,13 @@ def _prose(path):
 
 @pytest.fixture(scope="module")
 def prose():
-    return {path.name: _prose(path) for path in DOCUMENTS}
+    """Each document's text, keyed by its path.
+
+    Keyed by path and not by name: two of these files are called README.md, and
+    keying by name silently dropped the larger of them, which is the one most of
+    these numbers live in.
+    """
+    return {str(path.relative_to(ROOT_DIR)).replace("\\", "/"): _prose(path) for path in DOCUMENTS}
 
 
 VAE_DOCUMENTS = ("vae.tex", "01_vae_training.ipynb")
@@ -161,7 +168,7 @@ def test_the_documents_quote_the_protocol_the_code_runs(prose):
     for label, pattern, expected, minimum, documents in _quantities():
         found = 0
         for name, text in prose.items():
-            if documents and name not in documents:
+            if documents and not any(name.endswith(d) for d in documents):
                 continue
             for stated in re.findall(pattern, text, re.IGNORECASE):
                 found += 1
@@ -267,3 +274,46 @@ def test_the_architecture_the_prose_describes_is_the_one_that_is_built():
                 f"{name} names the wrong two widest layers"
             )
     assert found >= 2, "the sentence naming the two widest layers is no longer found"
+
+
+def test_every_budget_and_latent_dimension_named_in_prose_exists(prose):
+    """A budget or a latent dimension the project never ran cannot be discussed.
+
+    These two are the most repeated numbers in the write-ups and the easiest to
+    mistype, and unlike an error value they are drawn from a set of ten and a set
+    of two, so membership settles them outright. The audit that measures what the
+    suite catches found them to be the largest unguarded group.
+    """
+    table = pd.read_csv(ROOT_DIR / "results" / "benchmark.csv")
+    budgets = {str(m) for m in sorted(table["m"].unique())}
+    shipped = {
+        re.search(r"dim(\d+)", path.name).group(1)
+        for path in (ROOT_DIR / "models").glob("*decoder_dim*.keras")
+    }
+    assert budgets and shipped, "the artefacts that define these sets are missing"
+
+    # Two dimensions appear legitimately that no shipped model has: the two
+    # dimensional latent space that notebook 01 plots, and the celebA DCGAN of
+    # the reference paper, which it runs at 100.
+    allowed_dimensions = shipped | {"2", "100"}
+
+    checks = [
+        ("budget", r"(\d+) measurements", budgets, 40),
+        ("budget", r"\bm *= *(\d+)", budgets, 4),
+        ("latent dimension", r"\bk *= *(\d+)", allowed_dimensions, 60),
+        ("latent dimension", r"latent dimension (?:of )?(\d+)", allowed_dimensions, 20),
+    ]
+
+    wrong, totals = [], {}
+    for label, pattern, permitted, minimum in checks:
+        found = 0
+        for name, text in prose.items():
+            for stated in re.findall(pattern, text):
+                found += 1
+                if stated not in permitted:
+                    wrong.append(f"{name}: {label} {stated}, which the project never ran")
+        totals[pattern] = (found, minimum)
+
+    assert not wrong, "; ".join(wrong)
+    thin = {k: v for k, v in totals.items() if v[0] < v[1]}
+    assert not thin, f"these patterns no longer find what they guard: {thin}"
