@@ -474,3 +474,67 @@ def test_the_paper_penalty_sweep_is_quoted_correctly():
         at_paper["dcgan-30"][at_paper.index >= 300].mean()
         > main["dcgan-30"][main.index >= 300].mean()
     )
+
+
+#: Figures that several documents quote. Each entry pairs the phrase a document
+#: uses with the value recomputed from the data. The error this catches is a
+#: correction applied to four places out of five: every copy is individually
+#: plausible, so only reading the same figure out of every document at once shows
+#: the disagreement. The expected value is never taken from a document.
+SHARED_PHRASES = [
+    ("largest corrected p-value", r"largest corrected p-value among these is (\d\.\d{4})"),
+    ("blank-image level", r"(?:all-zero|blank) image[^.]*?(0\.\d{4})"),
+    ("spread of the three VAE floors", r"floors?(?: differ by| span) (0\.\d{4})"),
+    ("cost ratio", r"\*{0,2}(\d{2,3})x?\*{0,2} (?:gap|times the cost)"),
+    ("sweep duration", r"(?:about|~) (\d\.\d) (?:h on CPU|hours of computation)"),
+]
+
+
+def test_shared_figures_agree_with_the_data_in_every_document(benchmark, means):
+    """A figure quoted in several documents must be the recomputed one in each.
+
+    The documents are never compared against each other, so a value that is
+    wrong in all of them still fails rather than agreeing with itself.
+    """
+    vaes = ["fcvae-20", "vae-20", "vae-30"]
+    floors = {k: means[k][means.index >= 300].mean() for k in PRIORS}
+    seconds = benchmark.groupby("method")["seconds_per_batch"].mean()
+
+    npz, sig_path = RESULTS_DIR / "reconstructions.npz", RESULTS_DIR / "significance.csv"
+    if not npz.exists() or not sig_path.exists():
+        pytest.skip("the derived artefacts are not present")
+    with np.load(npz) as archive:
+        blank = (archive["ground_truth"] ** 2).mean()
+    significance = pd.read_csv(sig_path)
+
+    largest_p = significance[significance.verdict == "better"].p_holm.max()
+    vae_span = max(floors[k] for k in vaes) - min(floors[k] for k in vaes)
+    hours = benchmark.groupby(["method", "m"])["seconds_per_batch"].first().sum() / 3600
+    truth = {
+        "largest corrected p-value": f"{largest_p:.4f}",
+        "blank-image level": f"{blank:.4f}",
+        "spread of the three VAE floors": f"{vae_span:.4f}",
+        "cost ratio": f"{round(seconds[PRIORS].max() / seconds[PRIORS].min())}",
+        "sweep duration": f"{hours:.1f}",
+    }
+
+    documents = {
+        path.name: normalise(path.read_text(encoding="utf-8"))
+        for path in (
+            ROOT_DIR / "README.md",
+            ROOT_DIR / "docs" / "presentation_outline.md",
+            REPORT / "results.tex",
+            REPORT / "conclusions.tex",
+            REPORT / "summary.tex",
+        )
+    }
+
+    checked = 0
+    for label, pattern in SHARED_PHRASES:
+        for name, text in documents.items():
+            for stated in re.findall(pattern, text, re.IGNORECASE):
+                assert stated == truth[label], (
+                    f"{name} gives the {label} as {stated}, the data says {truth[label]}"
+                )
+                checked += 1
+    assert checked >= len(SHARED_PHRASES), "the phrases stopped matching any document"
