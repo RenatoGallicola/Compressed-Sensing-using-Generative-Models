@@ -282,3 +282,129 @@ def test_the_deck_covers_the_outline():
         "every content slide carries what to say"
     )
     assert np.isclose(len(titles), 17), "the outline promises seventeen slides"
+
+
+def _values_the_artefacts_contain():
+    """Every number the committed results and records hold, as the prose spells it."""
+    known: set[str] = set()
+
+    def remember(value):
+        for digits in (3, 4, 5):
+            known.add(f"{value:.{digits}f}")
+            known.add(f"{value:.{digits}f}".rstrip("0").rstrip("."))
+
+    # Only quantities a write-up could quote: the per-image rows themselves are
+    # left out, since admitting all seven hundred would admit almost any digit.
+    for name in ["benchmark.csv", "unregularised/benchmark.csv", "dcgan_paper_penalty/benchmark.csv"]:
+        path = ROOT_DIR / "results" / name
+        if not path.exists():
+            continue
+        table = pd.read_csv(path)
+        grouped = table.groupby(["method", "m"])["per_pixel_error"]
+        for summary in (grouped.mean(), grouped.median(), grouped.min(), grouped.max()):
+            for value in summary:
+                remember(float(value))
+        means = table.pivot_table(index="m", columns="method", values="per_pixel_error")
+        floors = {c: float(means[c][means.index >= 300].mean()) for c in means.columns}
+        for value in floors.values():
+            remember(value)
+        for column in means.columns:
+            remember(float(means[column][means.index >= 400].mean()))
+        # The write-ups compare floors as well as quoting them.
+        for one in floors.values():
+            for other in floors.values():
+                if one > other:
+                    remember(one - other)
+
+    sweep = ROOT_DIR / "results" / "lambda_sweep.csv"
+    if sweep.exists():
+        frame = pd.read_csv(sweep)
+        for column in ("per_pixel_error", "latent_norm"):
+            for value in frame.groupby(["method", "l2_penalty", "m"])[column].mean():
+                remember(float(value))
+
+    significance = ROOT_DIR / "results" / "significance.csv"
+    if significance.exists():
+        frame = pd.read_csv(significance)
+        for column in ("p_wilcoxon", "p_holm"):
+            for value in frame[column].unique():
+                remember(float(value))
+
+    tuning = ROOT_DIR / "results" / "lasso_tuning.csv"
+    if tuning.exists():
+        frame = pd.read_csv(tuning)
+        for value in frame.groupby(["basis", "m"])["error"].min():
+            remember(float(value))
+        for value in frame["alpha"].unique():
+            remember(float(value))
+
+    archive_path = ROOT_DIR / "results" / "reconstructions.npz"
+    if archive_path.exists():
+        with np.load(archive_path) as archive:
+            remember(float((archive["ground_truth"] ** 2).mean()))
+
+    # The selection records, and the seed experiment whose only record is its
+    # own table: those runs were not kept, so the table is the source and the
+    # quotations of it elsewhere are what this checks.
+    for record in sorted((ROOT_DIR / "models").glob("*selection*.txt")):
+        for value in re.findall(r"\d+\.\d+", record.read_text(encoding="utf-8")):
+            remember(float(value))
+    selection = (ROOT_DIR / "docs" / "model_selection.md").read_text(encoding="utf-8")
+    for line in selection.splitlines():
+        if line.startswith("|"):
+            for value in re.findall(r"\d+\.\d+", line):
+                remember(float(value))
+
+    # Constants of the setup rather than measurements of it.
+    for constant in [0.0002, 0.001, 0.01, 0.05, 0.1, 0.5, 0.9, 0.025, 0.975, 0.0, 1.0]:
+        remember(constant)
+    return known
+
+
+def test_no_quoted_decimal_is_a_number_the_project_never_measured():
+    """Every decimal in the write-ups must be a value some artefact contains.
+
+    The guards above each know the sentence they check. This one needs no
+    pattern: it builds the set of numbers the results hold and asks whether each
+    quoted decimal is one of them.
+
+    Its reach is worth stating plainly, since a guard that overstates itself is
+    worse than none. Measured against every decimal in the write-ups, it rejects
+    about three in ten single-digit corruptions: the rest land on some other
+    genuine value, because seventy budget-by-method means and their medians are
+    numbers of the same shape. What it does catch reliably is a figure that
+    matches nothing the project ever computed, which is how it found a floor
+    difference quoted as 0.0027 where the floors give 0.0026.
+    """
+    known = _values_the_artefacts_contain()
+    if len(known) < 500:
+        pytest.skip("the artefacts are not present")
+
+    documents = [
+        ROOT_DIR / "README.md",
+        ROOT_DIR / "docs" / "model_selection.md",
+        ROOT_DIR / "docs" / "presentation_outline.md",
+        ROOT_DIR / "docs" / "slides" / "slides.tex",
+        ROOT_DIR / "models" / "README.md",
+        ROOT_DIR / "results" / "README.md",
+        *sorted(REPORT.glob("*.tex")),
+        *sorted((ROOT_DIR / "notebooks").glob("*.ipynb")),
+    ]
+
+    orphans, checked = [], 0
+    for path in documents:
+        if path.suffix == ".ipynb":
+            cells = json.loads(path.read_text(encoding="utf-8"))["cells"]
+            text = "\n".join("".join(c["source"]) for c in cells if c["cell_type"] == "markdown")
+        else:
+            text = path.read_text(encoding="utf-8")
+        text = re.sub(r"\s+", " ", text)
+        for m in re.finditer(r"(?<![\w.])0\.\d{3,5}(?![\w.])", text):
+            checked += 1
+            token = m.group(0)
+            if token in known or token.rstrip("0") in known:
+                continue
+            orphans.append(f"{path.name}: {token} in '{text[max(0, m.start() - 60):m.end() + 30].strip()}'")
+
+    assert checked >= 250, f"only {checked} decimals were found to check"
+    assert not orphans, "these values appear in no artefact:\n" + "\n".join(orphans)

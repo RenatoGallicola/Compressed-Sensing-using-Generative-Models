@@ -482,7 +482,7 @@ which checkpoint was kept, and the reasoning is in
   for a VAE, so each DCGAN is a single seed whose best epoch is kept. Their
   columns are therefore one draw from a distribution this project has shown to be
   wide: the two DCGANs differ from each other by five times what separates the
-  three VAEs, 0.0027 against 0.0005 in the error floor. The
+  three VAEs, 0.0026 against 0.0005 in the error floor. The
   criteria also differ, on the ELBO for the VAE and on representation error for
   the DCGAN, and the size of that difference is measured in
   [`docs/model_selection.md`](docs/model_selection.md).
