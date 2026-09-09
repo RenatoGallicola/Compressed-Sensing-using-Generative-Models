@@ -327,7 +327,7 @@ Keep these after the conclusions, unshown unless asked.
 - Lasso reconstructions across budgets, from notebook 03.
 - The two dimensional VAE latent space, `docs/figures/vae_latent_space_2d.png`.
 - ELBO components during VAE training, from notebook 01.
-- DCGAN samples after two epochs next to the fifty epoch checkpoint, from
+- DCGAN samples after two epochs next to the selected checkpoint, from
   notebook 02, if asked how hard the GAN was to train.
 - `results/figures/lambda_sweep.png`, the full sweep over the regulariser.
 - The complete results table.
