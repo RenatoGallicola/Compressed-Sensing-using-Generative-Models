@@ -290,6 +290,7 @@ DOCUMENTS = [
     ROOT_DIR / "README.md",
     ROOT_DIR / "docs" / "presentation_outline.md",
     ROOT_DIR / "docs" / "model_selection.md",
+    ROOT_DIR / "docs" / "slides" / "slides.tex",
     ROOT_DIR / "models" / "README.md",
 ]
 
@@ -523,6 +524,7 @@ def test_shared_figures_agree_with_the_data_in_every_document(benchmark, means):
         for path in (
             ROOT_DIR / "README.md",
             ROOT_DIR / "docs" / "presentation_outline.md",
+            ROOT_DIR / "docs" / "slides" / "slides.tex",
             REPORT / "results.tex",
             REPORT / "conclusions.tex",
             REPORT / "summary.tex",
