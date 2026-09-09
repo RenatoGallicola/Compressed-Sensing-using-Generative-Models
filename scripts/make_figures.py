@@ -14,7 +14,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from scipy.stats import t as student_t
 
 from csgm.config import FIGURES_DIR, IMAGE_SHAPE, N_PIXELS, RESULTS_DIR
 from csgm.viz import plot_error_curves, save_figure
@@ -45,6 +44,27 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def bootstrap_interval(
+    values: np.ndarray, *, seed: int, draws: int = 10_000, level: float = 0.95
+) -> tuple[float, float]:
+    """Percentile bootstrap interval for the mean of ``values``.
+
+    Args:
+        values: Per-image errors at one budget.
+        seed: Seed of the resampling, so the figure is reproducible.
+        draws: Number of bootstrap resamples.
+        level: Coverage of the interval.
+
+    Returns:
+        The lower and upper ends, both non-negative because every resample mean
+        of non-negative values is non-negative.
+    """
+    rng = np.random.default_rng(seed)
+    resampled = rng.choice(values, size=(draws, len(values)), replace=True).mean(axis=1)
+    tail = (1.0 - level) / 2
+    return tuple(np.quantile(resampled, [tail, 1.0 - tail]))
+
+
 def error_curves(df: pd.DataFrame, figures_dir: Path) -> Path:
     """Plot mean per-pixel error against the measurement budget.
 
@@ -56,18 +76,29 @@ def error_curves(df: pd.DataFrame, figures_dir: Path) -> Path:
         Path of the written figure.
     """
     # The reference paper plots 95% confidence intervals, so the bars here are
-    # the same quantity. With ten images the normal multiplier is too optimistic,
-    # so the interval uses Student's t. The bars describe image-to-image spread
+    # the same quantity, but not by the same route. A symmetric interval around
+    # the mean assumes the mean is approximately normal, which ten strongly
+    # skewed per-image errors do not deliver: at three points the lower end falls
+    # below zero, outside the domain of a squared error and off a logarithmic
+    # axis entirely. The percentile bootstrap stays inside the domain and shows
+    # the asymmetry instead of hiding it. The bars describe image-to-image spread
     # at one measurement matrix, not the spread over matrices.
     n_images = df["image"].nunique()
-    multiplier = float(student_t.ppf(0.975, n_images - 1))
 
     curves, errorbars = {}, {}
     for method, group in df.groupby("method", sort=False):
-        stats = group.groupby("m")["per_pixel_error"].agg(["mean", "sem"]).sort_index()
         label = LABELS.get(method, method)
-        curves[label] = (stats.index.to_numpy(), stats["mean"].to_numpy())
-        errorbars[label] = np.nan_to_num(stats["sem"].to_numpy()) * multiplier
+        budgets, means, lower, upper = [], [], [], []
+        for m, per_image in group.groupby("m")["per_pixel_error"]:
+            values = per_image.to_numpy()
+            mean = float(values.mean())
+            low, high = bootstrap_interval(values, seed=int(m))
+            budgets.append(m)
+            means.append(mean)
+            lower.append(max(mean - low, 0.0))
+            upper.append(max(high - mean, 0.0))
+        curves[label] = (np.asarray(budgets), np.asarray(means))
+        errorbars[label] = np.vstack([lower, upper])
 
     fig = plot_error_curves(
         curves,
@@ -75,7 +106,7 @@ def error_curves(df: pd.DataFrame, figures_dir: Path) -> Path:
         logx=True,
         title=(
             f"MNIST recovery from Gaussian measurements\n"
-            f"mean of {n_images} images, bars are 95% confidence intervals"
+            f"mean of {n_images} images, bars are 95% bootstrap intervals"
         ),
     )
     return save_figure(fig, figures_dir / "error_vs_measurements.png")

@@ -56,7 +56,7 @@ Table \ref{tab:results} and figure \ref{fig:error vs measurements} report the er
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\linewidth]{assets/error_vs_measurements.png}
-    \caption{Error per pixel as a function of the number of measurements \( M \). Bars are 95\% normal-theory confidence intervals over the ten test images, from Student's \( t \) distribution, shown for comparability with figure 1 of \cite{bora2017}. The significance tests in section 6.5 do not assume normality; the bars are an illustration of spread and the tests are the inference. Both axes are logarithmic.}
+    \caption{Error per pixel as a function of the number of measurements \( M \). Bars are 95\% percentile bootstrap intervals for the mean over the ten test images, from ten thousand resamples. \cite{bora2017} plot normal-theory intervals in their figure 1; a symmetric interval assumes the mean of ten strongly skewed errors is approximately normal, and at three points it puts the lower end below zero, outside the range a squared error can take. The bootstrap interval stays inside that range and shows the asymmetry. The significance tests in section 6.5 do not assume normality either; the bars are an illustration of spread and the tests are the inference. Both axes are logarithmic.}
     \label{fig:error vs measurements}
 \end{figure}
 

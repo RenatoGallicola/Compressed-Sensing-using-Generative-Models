@@ -79,7 +79,9 @@ def plot_error_curves(
         logx: Use a logarithmic X axis. Budgets are spaced geometrically and the
             interesting regime is the small one, which a linear axis squeezes
             into the left edge.
-        errorbars: Optional mapping ``label -> half-width`` per point.
+        errorbars: Optional mapping ``label -> half-width`` per point, or to a
+            ``(2, n)`` array of distances below and above each point when the
+            interval is not symmetric.
 
     Returns:
         The created figure.

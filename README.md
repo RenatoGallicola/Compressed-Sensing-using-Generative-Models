@@ -493,9 +493,12 @@ which checkpoint was kept, and the reasoning is in
   DCGAN column produced by simply stopping the clock would have been noticeably
   weaker, which is worth knowing when comparing these numbers with a GAN result
   reported without a selection rule.
-- **The error bars describe image-to-image spread.** One measurement matrix is
-  drawn per budget, so the intervals say nothing about how much the curves would
-  move under a different draw of `A`.
+- **The error bars describe image-to-image spread.** They are percentile
+  bootstrap intervals for the mean, which stay inside the range a squared error
+  can take; a symmetric interval falls below zero at three of the seventy
+  points, since ten per-image errors are far from normal. One measurement matrix
+  is drawn per budget, so the intervals say nothing about how much the curves
+  would move under a different draw of `A`.
 
 ## References
 
