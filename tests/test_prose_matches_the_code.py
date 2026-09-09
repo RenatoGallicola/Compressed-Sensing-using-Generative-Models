@@ -198,6 +198,47 @@ def test_every_ratio_in_the_prose_divides_out(benchmark):
         )
 
 
+def test_the_seed_spread_is_the_one_its_own_table_gives():
+    """The factor 3.5 is quoted in five documents and rests on one table.
+
+    That table is the only record of the experiment behind it: the runs were not
+    kept, so nothing can recompute it from an artefact. What can be checked is
+    that the ratio the documents repeat is the ratio the table gives, which is
+    what would break if a cell or a quotation were edited on its own.
+    """
+    selection = (ROOT_DIR / "docs" / "model_selection.md").read_text(encoding="utf-8")
+    header = selection.index("| latent dim | seed")
+    block = selection[header: selection.index("\n\n", header)]
+    rows = re.findall(r"^\| (20|30) \|([^\n]*)\|\s*$", block, re.M)
+    assert len(rows) == 2, "the seed table is no longer where this reads it"
+
+    spreads = {}
+    for latent_dim, body in rows:
+        scores = [float(v) for v in re.findall(r"0\.\d+", body)]
+        assert len(scores) >= 3, f"k={latent_dim} lost its seeds"
+        spreads[latent_dim] = max(scores) / min(scores)
+
+    assert round(spreads["20"], 1) == 2.4
+    assert round(spreads["30"], 1) == 3.5
+    quoted = round(spreads["30"], 1)
+
+    for path in [
+        ROOT_DIR / "README.md",
+        ROOT_DIR / "docs" / "presentation_outline.md",
+        ROOT_DIR / "docs" / "slides" / "slides.tex",
+        REPORT / "results.tex",
+        REPORT / "conclusions.tex",
+        REPORT / "vae.tex",
+    ]:
+        text = re.sub(r"\\\w+\{([^}]*)\}", r"\1", path.read_text(encoding="utf-8"))
+        text = re.sub(r"[\\{}`*]", "", text)
+        text = re.sub(r"\s+", " ", text)
+        stated = re.findall(r"(?:factor of|varied by|by a factor of) (\d\.\d)", text)
+        assert str(quoted) in stated, (
+            f"{path.name} does not state the seed spread of {quoted}, it states {stated}"
+        )
+
+
 def test_the_slide_figures_are_the_ones_the_notebooks_produced():
     """Slide assets copied out of a notebook must still be that notebook's output.
 
