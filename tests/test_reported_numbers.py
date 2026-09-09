@@ -239,8 +239,16 @@ def test_quoted_recovery_costs(benchmark):
     # DCGANs, which is a different number.
     ratio = seconds[PRIORS].max() / seconds[PRIORS].min()
     assert round(ratio) == 93
-    for path in (ROOT_DIR / "README.md", REPORT / "conclusions.tex", REPORT / "summary.tex"):
+    # Two documents give the figure, a third spells it out in words. What matters
+    # is that none of them names a different number.
+    for path in (ROOT_DIR / "README.md", REPORT / "conclusions.tex"):
         assert "93" in path.read_text(encoding="utf-8"), f"{path.name} quotes another ratio"
+    spelled = (REPORT / "summary.tex").read_text(encoding="utf-8")
+    assert "more than ninety times" in spelled, "summary.tex no longer gives the cost ratio"
+    cheapest = seconds[PRIORS].min()
+    assert all(seconds[d] / cheapest > 90 for d in ("dcgan-20", "dcgan-30")), (
+        "summary.tex says both DCGANs cost more than ninety times the cheapest VAE"
+    )
 
 
 def test_lambda_sweep_endpoints():
