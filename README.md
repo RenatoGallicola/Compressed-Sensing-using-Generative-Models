@@ -27,7 +27,8 @@ accurately as Lasso does from 400, a 5.3x saving, and the figure is the same
 whichever of the two Lasso baselines is taken as the reference.** From 500
 measurements the ranking reverses and Lasso wins outright, because a generative
 prior can only ever return an image its generator is able to produce. Both
-effects, and the threshold, are what Bora et al. report.
+effects are what Bora et al. report, and the threshold they give for the
+reversal is more than 500 measurements.
 
 ---
 
@@ -426,10 +427,11 @@ uses for natural images, with the shrinkage swept per basis and set to its
 minimum-error value, and with the reconstruction clipped to `[0, 1]`. A
 comparison against a badly tuned baseline would say nothing.
 
-**Two deliberate departures from the reference paper.** It binarises MNIST,
-while every model here is trained and evaluated on the grayscale values scaled
-to `[0, 1]`, so absolute error values are not directly comparable with the ones
-it prints. And its experimental section specifies measurement entries with
+**Two deliberate departures from the reference paper.** It treats MNIST as
+binary, calling its input a vectorised binary image with pixel values of 0 or 1
+and stating that no pre-processing was performed, while every model here is
+trained and evaluated on the grayscale values scaled to `[0, 1]`, so absolute
+error values are not directly comparable with the ones it prints. And its experimental section specifies measurement entries with
 standard deviation `1/m` where its own theorems use `N(0, 1/m)`; we follow the
 theorems, since only that scaling makes `A` an approximate isometry.
 
