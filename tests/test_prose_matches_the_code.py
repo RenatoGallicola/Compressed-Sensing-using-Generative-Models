@@ -295,7 +295,12 @@ def _values_the_artefacts_contain():
 
     # Only quantities a write-up could quote: the per-image rows themselves are
     # left out, since admitting all seven hundred would admit almost any digit.
-    for name in ["benchmark.csv", "unregularised/benchmark.csv", "dcgan_paper_penalty/benchmark.csv"]:
+    sweeps = [
+        "benchmark.csv",
+        "unregularised/benchmark.csv",
+        "dcgan_paper_penalty/benchmark.csv",
+    ]
+    for name in sweeps:
         path = ROOT_DIR / "results" / name
         if not path.exists():
             continue
@@ -404,7 +409,8 @@ def test_no_quoted_decimal_is_a_number_the_project_never_measured():
             token = m.group(0)
             if token in known or token.rstrip("0") in known:
                 continue
-            orphans.append(f"{path.name}: {token} in '{text[max(0, m.start() - 60):m.end() + 30].strip()}'")
+            context = text[max(0, m.start() - 60): m.end() + 30].strip()
+            orphans.append(f"{path.name}: {token} in '{context}'")
 
     assert checked >= 250, f"only {checked} decimals were found to check"
     assert not orphans, "these values appear in no artefact:\n" + "\n".join(orphans)
