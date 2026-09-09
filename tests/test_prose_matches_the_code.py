@@ -21,33 +21,12 @@ import re
 import numpy as np
 import pandas as pd
 import pytest
+from helpers import script_defaults
 
 from csgm.config import ROOT_DIR
 
 REPORT = ROOT_DIR / "docs" / "report"
 PRIORS = ["fcvae-20", "vae-20", "vae-30", "dcgan-20", "dcgan-30"]
-
-
-def _defaults(script):
-    """Every ``--flag`` default in a script, read from its source."""
-    import ast
-
-    tree = ast.parse((ROOT_DIR / "scripts" / f"{script}.py").read_text(encoding="utf-8"))
-    found = {}
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and getattr(node.func, "attr", None) == "add_argument":
-            name = next(
-                (
-                    a.value
-                    for a in node.args
-                    if isinstance(a, ast.Constant) and str(a.value).startswith("--")
-                ),
-                None,
-            )
-            for keyword in node.keywords:
-                if keyword.arg == "default" and isinstance(keyword.value, ast.Constant):
-                    found[name] = keyword.value.value
-    return found
 
 
 def _table_numbers(path, caption_marker):
@@ -120,13 +99,16 @@ def test_the_architecture_tables_count_the_models_that_are_built():
 def test_the_protocol_the_write_ups_quote_is_the_scripts_defaults():
     """Running the documented commands has to reproduce the documented protocol.
 
-    Every write-up states these numbers in prose, where no test reaches them,
-    and the commands are given with no flags, so the defaults are the protocol.
+    The commands in the write-ups are given with no flags, so the defaults are
+    the protocol, and this pins them. It is the other half of
+    ``test_prose_quotes_the_protocol.py``, which reads the same quantities out of
+    the prose: that one catches a document drifting from the code, this one
+    catches the code drifting from what both were written to describe.
     """
-    benchmark = _defaults("run_benchmark")
-    vae = _defaults("train_vae")
-    dcgan = _defaults("train_dcgan")
-    select = _defaults("select_dcgan")
+    benchmark = script_defaults("run_benchmark")
+    vae = script_defaults("train_vae")
+    dcgan = script_defaults("train_dcgan")
+    select = script_defaults("select_dcgan")
 
     assert benchmark["--steps"] == 1000
     assert benchmark["--restarts"] == 10

@@ -14,12 +14,12 @@ a rewording fails instead of passing silently.
 
 from __future__ import annotations
 
-import ast
 import json
 import re
 
 import pandas as pd
 import pytest
+from helpers import script_defaults
 
 from csgm.config import ROOT_DIR
 
@@ -32,26 +32,6 @@ DOCUMENTS = [
     *sorted((ROOT_DIR / "docs" / "report").glob("*.tex")),
     *sorted((ROOT_DIR / "notebooks").glob("*.ipynb")),
 ]
-
-
-def _defaults(script):
-    """Every ``--flag`` default in a script, read from its source."""
-    tree = ast.parse((ROOT_DIR / "scripts" / f"{script}.py").read_text(encoding="utf-8"))
-    found = {}
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and getattr(node.func, "attr", None) == "add_argument":
-            name = next(
-                (
-                    a.value
-                    for a in node.args
-                    if isinstance(a, ast.Constant) and str(a.value).startswith("--")
-                ),
-                None,
-            )
-            for keyword in node.keywords:
-                if keyword.arg == "default" and isinstance(keyword.value, ast.Constant):
-                    found[name] = keyword.value.value
-    return found
 
 
 def _prose(path):
@@ -90,10 +70,10 @@ def _quantities():
     reading ``batch size of`` everywhere would compare the DCGAN's 64 with the
     VAE's 100 and call one of them wrong.
     """
-    benchmark = _defaults("run_benchmark")
-    vae = _defaults("train_vae")
-    dcgan = _defaults("train_dcgan")
-    select = _defaults("select_dcgan")
+    benchmark = script_defaults("run_benchmark")
+    vae = script_defaults("train_vae")
+    dcgan = script_defaults("train_dcgan")
+    select = script_defaults("select_dcgan")
     training_images = int(60_000 * (1 - dcgan["--validation-fraction"]))
 
     return [
