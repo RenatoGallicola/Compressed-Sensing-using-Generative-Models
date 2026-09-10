@@ -256,6 +256,52 @@ def test_the_architecture_the_prose_describes_is_the_one_that_is_built():
     assert found >= 2, "the sentence naming the two widest layers is no longer found"
 
 
+def test_the_paper_architecture_is_spelled_out_correctly(prose):
+    """The reference network is quoted as a shape and as a parameter count.
+
+    It is the one prior taken from someone else's paper, so a reader comparing
+    our numbers with theirs starts here. The shape appears in three documents and
+    the count in one, and both come from a network the code can build.
+    """
+    from csgm.models import build_fc_decoder
+
+    decoder = build_fc_decoder(20)
+    widths = [int(w.shape[0]) for w in decoder.weights if len(w.shape) == 2]
+    spelled = "-".join(str(w) for w in reversed([*widths, 784]))
+
+    found = 0
+    for name, text in prose.items():
+        # The README sets each width in maths, so the dashes come back spaced.
+        joined = re.sub(r"(\d) *- *(\d)", r"\1-\2", text)
+        for stated in re.findall(r"fully connected (\d[\d-]+\d)", joined):
+            found += 1
+            assert stated == spelled, f"{name}: states {stated}, the built network is {spelled}"
+    assert found >= 2, "the reference architecture is no longer spelled out anywhere"
+
+    readme = (ROOT_DIR / "README.md").read_text(encoding="utf-8")
+    quoted = re.search(r"decoder has ([\d,]+) parameters", readme)
+    assert quoted, "the README no longer gives the size of the paper's decoder"
+    assert quoted.group(1) == f"{decoder.count_params():,}"
+
+
+def test_the_badges_promise_the_versions_the_project_supports():
+    """A badge is the first thing a reader believes and the last thing anyone edits."""
+    readme = (ROOT_DIR / "README.md").read_text(encoding="utf-8")
+    pyproject = (ROOT_DIR / "pyproject.toml").read_text(encoding="utf-8")
+    workflow = (ROOT_DIR / ".github" / "workflows" / "checks.yml").read_text(encoding="utf-8")
+
+    requires = re.search(r'requires-python\s*=\s*"([^"]+)"', pyproject).group(1)
+    lowest = re.search(r">=\s*(\d+\.\d+)", requires).group(1)
+    tested = sorted(set(re.findall(r'"(3\.\d+)"', workflow)))
+    assert tested, "the workflow no longer names the versions it runs on"
+    assert lowest in tested, f"requires-python allows {lowest}, which the CI does not run"
+
+    badge = re.search(r"python-([\d.%|\s]+)-blue", readme)
+    assert badge, "the README no longer carries a Python badge"
+    promised = sorted(set(re.findall(r"3\.\d+", badge.group(1))))
+    assert promised == tested, f"the badge promises {promised}, the CI runs {tested}"
+
+
 def test_every_budget_and_latent_dimension_named_in_prose_exists(prose):
     """A budget or a latent dimension the project never ran cannot be discussed.
 
