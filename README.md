@@ -1,6 +1,6 @@
 # Compressed Sensing using Generative Models
 
-[![CI](https://github.com/RenatoGallicola/Compressed-Sensing-using-Generative-Models/actions/workflows/verify.yml/badge.svg)](https://github.com/RenatoGallicola/Compressed-Sensing-using-Generative-Models/actions/workflows/verify.yml)
+[![CI](https://github.com/RenatoGallicola/compressed-sensing-using-generative-models/actions/workflows/verify.yml/badge.svg)](https://github.com/RenatoGallicola/compressed-sensing-using-generative-models/actions/workflows/verify.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20|%203.12-blue.svg)](https://www.python.org/)
 [![TensorFlow 2.17](https://img.shields.io/badge/TensorFlow-2.17-FF6F00.svg?logo=tensorflow&logoColor=white)](https://www.tensorflow.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -316,8 +316,8 @@ afterwards, is in [`docs/model_selection.md`](docs/model_selection.md).
 ## Getting started
 
 ```bash
-git clone https://github.com/RenatoGallicola/Compressed-Sensing-using-Generative-Models.git
-cd Compressed-Sensing-using-Generative-Models
+git clone https://github.com/RenatoGallicola/compressed-sensing-using-generative-models.git
+cd compressed-sensing-using-generative-models
 
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"

@@ -7,7 +7,7 @@ authors:
     family-names: Gallicola
   - given-names: Matteo
     family-names: Forlivesi
-repository-code: https://github.com/RenatoGallicola/Compressed-Sensing-using-Generative-Models
+repository-code: https://github.com/RenatoGallicola/compressed-sensing-using-generative-models
 abstract: >-
   Reproduction and extension of Bora et al. (2017), "Compressed Sensing using
   Generative Models", on MNIST. A DCGAN generator and a VAE decoder are used as
