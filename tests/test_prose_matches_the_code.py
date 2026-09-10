@@ -265,6 +265,90 @@ def test_the_deck_covers_the_outline():
     assert np.isclose(len(titles), 17), "the outline promises seventeen slides"
 
 
+#: Beamer ships these and no others. A name outside them stops the build with
+#: "File `beamercolorthemeX.sty' not found", which is only visible to whoever
+#: compiles the deck, and the deck is compiled elsewhere.
+BEAMER_THEMES = {
+    "AnnArbor",
+    "Antibes",
+    "Bergen",
+    "Berkeley",
+    "Berlin",
+    "Boadilla",
+    "CambridgeUS",
+    "Copenhagen",
+    "Darmstadt",
+    "Dresden",
+    "Frankfurt",
+    "Goettingen",
+    "Hannover",
+    "Ilmenau",
+    "JuanLesPins",
+    "Luebeck",
+    "Madrid",
+    "Malmoe",
+    "Marburg",
+    "Montpellier",
+    "PaloAlto",
+    "Pittsburgh",
+    "Rochester",
+    "Singapore",
+    "Szeged",
+    "Warsaw",
+    "boxes",
+    "default",
+}
+BEAMER_COLOUR_THEMES = {
+    "albatross",
+    "beaver",
+    "beetle",
+    "crane",
+    "default",
+    "dolphin",
+    "dove",
+    "fly",
+    "lily",
+    "monarch",
+    "orchid",
+    "rose",
+    "seagull",
+    "seahorse",
+    "sidebartab",
+    "spruce",
+    "whale",
+    "wolverine",
+}
+
+
+def test_the_deck_asks_for_themes_that_exist():
+    """A theme that does not exist fails the build and nothing else.
+
+    The structural checks on the deck all pass without it: the braces balance,
+    the images resolve, the frames match the outline. Only a compiler notices,
+    and the deck is compiled on someone else's machine.
+    """
+    deck = (ROOT_DIR / "docs" / "slides" / "slides.tex").read_text(encoding="utf-8")
+
+    named = re.findall(r"\\usetheme\{([^}]*)\}", deck)
+    assert named, "the deck no longer chooses a theme"
+    unknown = [name for name in named if name not in BEAMER_THEMES]
+    assert not unknown, f"no such beamer theme: {unknown}"
+
+    coloured = re.findall(r"\\usecolortheme\{([^}]*)\}", deck)
+    unknown = [name for name in coloured if name not in BEAMER_COLOUR_THEMES]
+    assert not unknown, f"no such beamer colour theme: {unknown}"
+
+    # Anything outside a plain installation has to be justified, since the deck
+    # is built wherever the talk is given.
+    allowed = {"inputenc", "fontenc", "babel", "amsmath", "amssymb", "graphicx", "booktabs"}
+    packages = {
+        name.strip()
+        for group in re.findall(r"\\usepackage(?:\[[^\]]*\])?\{([^}]*)\}", deck)
+        for name in group.split(",")
+    }
+    assert packages <= allowed, f"the deck needs packages beyond the usual: {packages - allowed}"
+
+
 def _values_the_artefacts_contain():
     """Every number the committed results and records hold, as the prose spells it."""
     known: set[str] = set()
