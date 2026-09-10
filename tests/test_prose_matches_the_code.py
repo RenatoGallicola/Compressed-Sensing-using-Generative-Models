@@ -231,22 +231,29 @@ def test_the_slide_figures_are_the_ones_the_notebooks_produced():
     if not assets.exists():
         pytest.skip("the deck has no assets")
 
-    stored = set()
+    # The deck keeps its own copy of every figure so that its folder is all that
+    # has to be uploaded to build the talk. Each copy comes either from a
+    # notebook's stored output or from the figures the scripts generate.
+    sources = set()
     for notebook in sorted((ROOT_DIR / "notebooks").glob("*.ipynb")):
         cells = json.loads(notebook.read_text(encoding="utf-8"))["cells"]
         for cell in cells:
             for output in cell.get("outputs", []):
                 payload = output.get("data", {}).get("image/png")
                 if payload:
-                    stored.add(hashlib.sha256(base64.b64decode(payload)).hexdigest())
+                    sources.add(hashlib.sha256(base64.b64decode(payload)).hexdigest())
+    for directory in ("results/figures", "docs/figures"):
+        for figure in sorted((ROOT_DIR / directory).glob("*.png")):
+            sources.add(hashlib.sha256(figure.read_bytes()).hexdigest())
 
     stale = [
         path.name
         for path in sorted(assets.glob("*.png"))
-        if hashlib.sha256(path.read_bytes()).hexdigest() not in stored
+        if hashlib.sha256(path.read_bytes()).hexdigest() not in sources
     ]
     assert not stale, (
-        f"{stale} are no longer any notebook's output; re-export them from the notebooks"
+        f"{stale} match neither a notebook's output nor a generated figure; "
+        "re-copy them from whichever produced them"
     )
 
 

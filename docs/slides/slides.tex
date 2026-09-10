@@ -25,7 +25,10 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 
-\graphicspath{{assets/}{../report/assets/}{../figures/}{../../results/figures/}}
+% Every figure the deck uses has a copy in assets/, so this folder is all that
+% has to be uploaded to build the talk. A test checks each copy against the
+% notebook or the script that produced it.
+\graphicspath{{assets/}}
 
 \title{Compressed Sensing using Generative Models}
 \subtitle{Reproducing Bora, Jalal, Price \& Dimakis (ICML 2017)}
