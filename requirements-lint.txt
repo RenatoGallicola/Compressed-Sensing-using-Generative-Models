@@ -1,0 +1,3 @@
+# Pinned to a minor series: the formatter's output changes between series, so an
+# unpinned ruff can fail CI on a commit that changed nothing.
+ruff>=0.16,<0.17

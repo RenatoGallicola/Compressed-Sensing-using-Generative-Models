@@ -36,8 +36,7 @@ def _table_numbers(path, caption_marker):
     start = text.rindex(r"\begin{table}", 0, end)
     block = text[start:end]
     return [
-        int(m.group(0).replace("{,}", ""))
-        for m in re.finditer(r"\d{1,3}(?:\{,\}\d{3})+", block)
+        int(m.group(0).replace("{,}", "")) for m in re.finditer(r"\d{1,3}(?:\{,\}\d{3})+", block)
     ]
 
 
@@ -190,7 +189,7 @@ def test_the_seed_spread_is_the_one_its_own_table_gives():
     """
     selection = (ROOT_DIR / "docs" / "model_selection.md").read_text(encoding="utf-8")
     header = selection.index("| latent dim | seed")
-    block = selection[header: selection.index("\n\n", header)]
+    block = selection[header : selection.index("\n\n", header)]
     rows = re.findall(r"^\| (20|30) \|([^\n]*)\|\s*$", block, re.M)
     assert len(rows) == 2, "the seed table is no longer where this reads it"
 
@@ -391,7 +390,7 @@ def test_no_quoted_decimal_is_a_number_the_project_never_measured():
             token = m.group(0)
             if token in known or token.rstrip("0") in known:
                 continue
-            context = text[max(0, m.start() - 60): m.end() + 30].strip()
+            context = text[max(0, m.start() - 60) : m.end() + 30].strip()
             orphans.append(f"{path.name}: {token} in '{context}'")
 
     assert checked >= 250, f"only {checked} decimals were found to check"

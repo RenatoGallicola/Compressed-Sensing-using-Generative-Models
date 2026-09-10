@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install ruff
+      - run: pip install -r requirements-lint.txt
       - run: ruff check .
       - run: ruff format --check .
 
@@ -30,6 +30,11 @@ jobs:
         python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The results record the revision that produced them, and a test
+          # resolves that pointer. A shallow checkout has nothing to resolve it
+          # against, so the whole history is fetched here.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}

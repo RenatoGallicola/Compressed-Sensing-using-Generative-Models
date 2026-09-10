@@ -328,8 +328,7 @@ def test_the_significance_table_matches_an_exact_computation(benchmark):
     for (better, worse), group in committed.groupby(["better", "worse"], sort=False):
         budgets = sorted(group["m"])
         raw = [
-            exact(wide.loc[m, better].to_numpy() - wide.loc[m, worse].to_numpy())
-            for m in budgets
+            exact(wide.loc[m, better].to_numpy() - wide.loc[m, worse].to_numpy()) for m in budgets
         ]
         adjusted = holm(raw)
         recorded = group.set_index("m")

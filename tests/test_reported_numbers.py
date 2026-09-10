@@ -359,7 +359,22 @@ def test_the_recorded_revision_is_in_the_history():
 
     Rewriting commit messages changes every hash, which silently orphans the
     provenance recorded by an earlier run.
+
+    A shallow checkout has no older commits to resolve against, so there the
+    question cannot be asked and the test skips rather than reporting an absence
+    it cannot distinguish from a broken pointer.
     """
+    shallow = subprocess.run(
+        ["git", "rev-parse", "--is-shallow-repository"],
+        cwd=ROOT_DIR,
+        capture_output=True,
+        text=True,
+    )
+    if shallow.returncode != 0:
+        pytest.skip("not a git checkout")
+    if shallow.stdout.strip() == "true":
+        pytest.skip("the checkout is shallow, so earlier revisions are not present")
+
     for name in ("benchmark_meta.json", "unregularised/benchmark_meta.json"):
         path = RESULTS_DIR / name
         if not path.exists():

@@ -158,9 +158,7 @@ def test_the_documents_quote_the_protocol_the_code_runs(prose):
 
     assert not wrong, "; ".join(wrong)
     thin = {k: v for k, v in counts.items() if v[0] < v[1]}
-    assert not thin, (
-        f"these patterns no longer find what they guard, so they guard nothing: {thin}"
-    )
+    assert not thin, f"these patterns no longer find what they guard, so they guard nothing: {thin}"
 
 
 def test_the_dataset_the_documents_describe_is_mnist(prose):
@@ -211,9 +209,7 @@ def test_the_architecture_the_prose_describes_is_the_one_that_is_built():
         return [tuple(int(d) for d in layer.output.shape[1:]) for layer in model.layers]
 
     def filters(model):
-        return [
-            int(layer.filters) for layer in model.layers if getattr(layer, "filters", None)
-        ]
+        return [int(layer.filters) for layer in model.layers if getattr(layer, "filters", None)]
 
     raw_readme = (ROOT_DIR / "README.md").read_text(encoding="utf-8")
     readme = _shapes(raw_readme)

@@ -1,5 +1,5 @@
 -r requirements.txt
 pytest>=8.0
-ruff>=0.6
+-r requirements-lint.txt
 jupyter>=1.0
 nbconvert>=7.0
