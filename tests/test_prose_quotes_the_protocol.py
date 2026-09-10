@@ -281,10 +281,23 @@ def test_the_paper_architecture_is_spelled_out_correctly(prose):
 
 
 def test_the_badges_promise_the_versions_the_project_supports():
-    """A badge is the first thing a reader believes and the last thing anyone edits."""
+    """A badge is the first thing a reader believes and the last thing anyone edits.
+
+    The workflow is found by glob rather than by name: its file gets renamed
+    whenever the run numbering is restarted, and a guard that breaks on a rename
+    would be one more thing to remember.
+    """
     readme = (ROOT_DIR / "README.md").read_text(encoding="utf-8")
     pyproject = (ROOT_DIR / "pyproject.toml").read_text(encoding="utf-8")
-    workflow = (ROOT_DIR / ".github" / "workflows" / "checks.yml").read_text(encoding="utf-8")
+    workflows = sorted((ROOT_DIR / ".github" / "workflows").glob("*.yml"))
+    assert len(workflows) == 1, f"expected one workflow, found {[p.name for p in workflows]}"
+    workflow = workflows[0].read_text(encoding="utf-8")
+
+    badge_target = re.search(r"actions/workflows/([\w.-]+)/badge\.svg", readme)
+    assert badge_target, "the README no longer carries a CI badge"
+    assert badge_target.group(1) == workflows[0].name, (
+        f"the badge points at {badge_target.group(1)}, the workflow is {workflows[0].name}"
+    )
 
     requires = re.search(r'requires-python\s*=\s*"([^"]+)"', pyproject).group(1)
     lowest = re.search(r">=\s*(\d+\.\d+)", requires).group(1)
