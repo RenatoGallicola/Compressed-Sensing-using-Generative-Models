@@ -4,13 +4,13 @@ We compare five generative priors against two LASSO baselines. Four of the prior
 
 \subsection{Experimental Protocol}
 
-Every method is evaluated on the same ten test images, one for each digit class, so that the comparison is not driven by a single lucky or unlucky example. At each measurement budget \( M \) all the methods receive the same measurement matrix \( A \) and the same noise vector, and the noise is scaled so that its expected norm remains equal to 0.1 whatever the value of \( M \).
+Every method is evaluated on the same ten test images, one for each digit class, so that the comparison is not driven by a single lucky or unlucky example. At each measurement budget \( m \) all the methods receive the same measurement matrix \( A \) and the same noise vector, and the noise is scaled so that its expected norm remains equal to 0.1 whatever the value of \( m \).
 \\
 The reconstruction quality is measured as the squared distance between the reconstruction and the original image, divided by the number of pixels:
 \begin{equation}
 \text{error per pixel} = \frac{\lVert \hat{x} - x^* \rVert_2^2}{n}, \qquad n = 784 .
 \end{equation}
-This is not the same quantity as the measurement error \( \lVert AG(\hat{z}) - y \rVert \) that the recovery algorithm minimizes. The latter decreases as \( M \) decreases, simply because fewer constraints have to be satisfied, so it describes how well the optimization converged rather than how good the reconstruction is. For this reason it is used only as a diagnostic and to rank the random restarts, while every number reported below is computed against the ground truth image.
+This is not the same quantity as the measurement error \( \lVert AG(\hat{z}) - y \rVert \) that the recovery algorithm minimizes. The latter decreases as \( m \) decreases, simply because fewer constraints have to be satisfied, so it describes how well the optimization converged rather than how good the reconstruction is. For this reason it is used only as a diagnostic and to rank the random restarts, while every number reported below is computed against the ground truth image.
 \\
 All the reconstructions obtained with a generative prior use a thousand gradient steps, ten random restarts and the regularization weight \( \lambda = 0.1 \) recommended in \cite{bora2017}. Section 6.6 reports what happens without the regularization term.
 
@@ -23,7 +23,7 @@ LASSO (Least Absolute Shrinkage and Selection Operator) assumes sparsity in some
 \\
 We report two choices of \( \Psi \). The first is the \textbf{pixel basis}, \( \Psi = I \), which is the baseline used in \cite{bora2017} for MNIST: the authors observe that the digits are already sparse in pixel space, since most of the image is background. The second is the \textbf{orthonormal DCT basis}, which the same authors use for natural images and which is the usual choice for image compression. The two behave very differently on this dataset and reporting only one of them would misrepresent how strong the classical approach is.
 \\
-A baseline is only informative if it is given a good configuration, so the shrinkage \( \alpha \) was swept over eight values spanning seven orders of magnitude, separately for each basis and for each measurement budget, and the value minimizing the error was kept at every budget. Tuning per budget rather than once is deliberate: the implementation we use scales the objective by \( 1/(2M) \), so a fixed \( \alpha \) is effectively a much stronger penalty at large \( M \) than at small \( M \), and a single value costs the baseline up to a factor of two at the ends of the range. The sweep is run on ten images drawn with a different seed from the ones the benchmark scores, and with its own measurement matrices and noise, so the baseline is given its best configuration without that configuration being chosen on the evaluation data. The reconstructions are clipped to \( [0,1] \), the range MNIST pixels live in, which also improves the baseline. Note that the shrinkage quoted in \cite{bora2017} is not directly transferable, for the same scaling reason.
+A baseline is only informative if it is given a good configuration, so the shrinkage \( \alpha \) was swept over eight values spanning seven orders of magnitude, separately for each basis and for each measurement budget, and the value minimizing the error was kept at every budget. Tuning per budget rather than once is deliberate: the implementation we use scales the objective by \( 1/(2m) \), so a fixed \( \alpha \) is effectively a much stronger penalty at large \( m \) than at small \( m \), and a single value costs the baseline up to a factor of two at the ends of the range. The sweep is run on ten images drawn with a different seed from the ones the benchmark scores, and with its own measurement matrices and noise, so the baseline is given its best configuration without that configuration being chosen on the evaluation data. The reconstructions are clipped to \( [0,1] \), the range MNIST pixels live in, which also improves the baseline. Note that the shrinkage quoted in \cite{bora2017} is not directly transferable, for the same scaling reason.
 \\
 From our experiments, LASSO in either basis is inadequate until a substantial number of measurements is available, and neither produces a coherent digit at 200 measurements or below. The two fail differently: the DCT basis returns a noisy image in which the digit is buried, while the L1 penalty in the pixel basis drives most of the reconstruction to zero, so it returns an almost blank image with a few scattered dots. On the other hand LASSO keeps improving as measurements are added, and in the pixel basis it becomes essentially exact once the budget approaches the dimension of the signal.
 
@@ -35,7 +35,7 @@ Table \ref{tab:results} and figure \ref{fig:error vs measurements} report the er
     \centering
     \small
     \begin{tabular}{r|cc|ccccc}
-    \( M \) & LASSO & LASSO & VAE & VAE & VAE & DCGAN & DCGAN \\
+    \( m \) & LASSO & LASSO & VAE & VAE & VAE & DCGAN & DCGAN \\
      & (pixel) & (DCT) & (paper) & \( k{=}20 \) & \( k{=}30 \) & \( k{=}20 \) & \( k{=}30 \) \\
     \hline
     10  & 0.1217 & 0.1032 & \textbf{0.0680} & 0.0778 & 0.0755 & 0.0864 & 0.1060 \\
@@ -56,7 +56,7 @@ Table \ref{tab:results} and figure \ref{fig:error vs measurements} report the er
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\linewidth]{assets/error_vs_measurements.png}
-    \caption{Error per pixel as a function of the number of measurements \( M \). Bars are 95\% percentile bootstrap intervals for the mean over the ten test images, from ten thousand resamples. \cite{bora2017} plot normal-theory intervals in their figure 1; a symmetric interval assumes the mean of ten strongly skewed errors is approximately normal, and at three points it puts the lower end below zero, outside the range a squared error can take. The bootstrap interval stays inside that range and shows the asymmetry. The significance tests in section 6.5 do not assume normality either; the bars are an illustration of spread and the tests are the inference. Both axes are logarithmic.}
+    \caption{Error per pixel as a function of the number of measurements \( m \). Bars are 95\% percentile bootstrap intervals for the mean over the ten test images, from ten thousand resamples. \cite{bora2017} plot normal-theory intervals in their figure 1; a symmetric interval assumes the mean of ten strongly skewed errors is approximately normal, and at three points it puts the lower end below zero, outside the range a squared error can take. The bootstrap interval stays inside that range and shows the asymmetry. The significance tests in section 6.5 do not assume normality either; the bars are an illustration of spread and the tests are the inference. Both axes are logarithmic.}
     \label{fig:error vs measurements}
 \end{figure}
 
